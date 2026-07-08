@@ -1,0 +1,19 @@
+# Live Transcriber (app version) — CPU-only, offline. Python 3.14 on Windows.
+#
+#   py -3.14 -m venv .venv
+#   .venv\Scripts\python -m pip install -r requirements.txt
+#
+# GPU is intentionally NOT included: this is the CPU-only build. ctranslate2
+# (pulled in by faster-whisper) ships CPU support on its own; the ~1.9 GB
+# nvidia-*-cu12 wheels are deliberately omitted.
+
+faster-whisper==1.2.1     # Whisper inference (brings in ctranslate2, tokenizers, av)
+soundcard==0.4.6          # loopback + microphone capture
+pywebview==6.2.1          # native window / WebView2 UI host
+pythonnet==3.1.0          # required by pywebview's WebView2 backend on Windows
+numpy==2.5.0
+pillow==12.3.0            # icon handling
+pywin32==312              # Windows taskbar identity / shell integration
+
+# Build tooling (only needed to produce the .exe / installer, not to run from source)
+pyinstaller==6.21.0

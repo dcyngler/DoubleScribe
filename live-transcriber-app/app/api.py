@@ -1,0 +1,149 @@
+"""
+pywebview bridge: exposes Python methods to the JS frontend, and pushes live
+events back into the page. Owns a Store (metadata) and a LiveEngine (capture).
+"""
+
+import json
+import threading
+from pathlib import Path
+
+import webview
+
+from engine import LiveEngine
+from store import Store, TRANSCRIPT_DIR
+
+
+class Api:
+    def __init__(self):
+        self.store = Store()
+        self.engine = LiveEngine(
+            on_phrase=self._on_phrase,
+            on_status=self._on_status,
+            on_saved=self._on_saved,
+        )
+        self._window = None
+        self._ready = False
+        self._status = "Starting up..."
+        self._pending_title = ""
+
+    # -- wiring -------------------------------------------------------------
+    def attach(self, window):
+        self._window = window
+
+    def boot(self):
+        """Runs on a background thread once the GUI is up."""
+        try:
+            self.store.auto_import()
+        except Exception:
+            pass
+        self._emit("onLibrary", self.store.list())
+        try:
+            self.engine.load()      # Whisper only -- fast
+        except Exception as exc:
+            self._on_status(f"Model load failed: {exc}")
+            return
+        self._ready = True
+        self._on_status("ready")
+        self._emit("onReady", self.engine.list_devices())   # recording usable now
+
+    # -- event push (Python -> JS) -----------------------------------------
+    def _emit(self, fn, *args):
+        if not self._window:
+            return
+        payload = ",".join(json.dumps(a, ensure_ascii=False) for a in args)
+        try:
+            self._window.evaluate_js(f"window.{fn} && window.{fn}({payload})")
+        except Exception:
+            pass
+
+    def _on_phrase(self, label, text):
+        self._emit("onPhrase", label, text)
+
+    def _on_status(self, msg):
+        self._status = msg
+        self._emit("onStatus", msg)
+
+    def _on_saved(self, meta):
+        entry = self.store.add_recording(meta, self._pending_title)
+        self._pending_title = ""
+        self._emit("onSaved", entry)
+
+    # -- queries (JS -> Python) --------------------------------------------
+    def get_status(self):
+        return {"ready": self._ready, "message": self._status}
+
+    def get_library(self):
+        return self.store.list()
+
+    def get_devices(self):
+        return self.engine.list_devices()
+
+    def get_transcript(self, tid):
+        return self.store.get_transcript(tid)
+
+    def search(self, query):
+        return self.store.search(query)
+
+    # -- recording ----------------------------------------------------------
+    def start(self, out_index, in_index, title=""):
+        self._pending_title = title or ""
+        try:
+            return {"ok": True, "devices": self.engine.start(int(out_index), int(in_index))}
+        except Exception as exc:
+            return {"ok": False, "error": str(exc)}
+
+    def set_pending_title(self, title):
+        self._pending_title = title or ""
+        return True
+
+    def stop(self, title=""):
+        if title:
+            self._pending_title = title
+        self.engine.stop()
+        return True
+
+    # -- metadata mutations -------------------------------------------------
+    def set_title(self, tid, title):
+        return self.store.set_title(tid, title)
+
+    def add_tag(self, tid, tag):
+        return self.store.add_tag(tid, tag)
+
+    def remove_tag(self, tid, tag):
+        return self.store.remove_tag(tid, tag)
+
+    def create_folder(self, name):
+        return self.store.create_folder(name)
+
+    def set_folder(self, tid, folder):
+        return self.store.set_folder(tid, folder)
+
+    def toggle_favourite(self, tid):
+        return self.store.toggle_favourite(tid)
+
+    def remove_from_library(self, tid):
+        """UI 'delete': hides the item but keeps the .txt on disk (policy)."""
+        path = self.store.file_path(tid)
+        self.store.archive(tid)
+        return {"ok": True, "kept_at": path}
+
+    # -- export -------------------------------------------------------------
+    def export_txt(self, tid):
+        t = self.store._by_id(tid)
+        if not t:
+            return {"ok": False}
+        src = TRANSCRIPT_DIR / t["filename"]
+        safe = "".join(c for c in t["title"] if c.isalnum() or c in " -_").strip() or "transcript"
+        try:
+            result = self._window.create_file_dialog(
+                webview.SAVE_DIALOG, save_filename=f"{safe}.txt")
+        except Exception as exc:
+            return {"ok": False, "error": str(exc)}
+        if not result:
+            return {"ok": False, "cancelled": True}
+        dest = result[0] if isinstance(result, (list, tuple)) else result
+        try:
+            Path(dest).write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+            return {"ok": True, "path": dest}
+        except Exception as exc:
+            return {"ok": False, "error": str(exc)}

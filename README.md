@@ -1,2 +1,2 @@
-# livetranscription
-Live transcription app on your desktop with your files only
+# doublescriibe
+Double Scribe app on your desktop with your files only

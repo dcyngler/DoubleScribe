@@ -54,6 +54,14 @@ SPEAKER_MATCH_THRESHOLD = 0.5           # >= this cosine score = same known spea
                                         # (higher -> more speakers, lower -> fewer)
 MIN_SPK_DURATION = 1.0                  # phrases shorter than this reuse the last speaker
 
+# Live voice-change detection (Them channel, "new bubble" UI -- no naming)
+VOICE_CHANGE_THRESHOLD = 0.35           # < this cosine score vs the current voice's running
+                                        # average = new bubble (lower -> fewer, more confident
+                                        # splits; higher -> more, twitchier -- one animated
+                                        # speaker doing voices/laughing can still trip this)
+MIN_VOICE_CHANGE_DURATION = 1.2         # phrases shorter than this are too short to fingerprint
+                                        # reliably, so they're assumed to continue the current voice
+
 CHUNK_FRAMES = max(1, int(SAMPLE_RATE * CHUNK_SECONDS))
 PREROLL_CHUNKS = max(1, round(PREROLL / CHUNK_SECONDS))
 
@@ -94,6 +102,54 @@ class SpeakerTracker:
             self.mgr.add(name, emb)
         self.last = name
         return name
+
+
+class VoiceChangeDetector:
+    """Flags whether a 'Them' phrase sounds like a different voice than the
+    current run of phrases. Unlike SpeakerTracker, it never names or re-
+    recognises a voice across the call -- it just compares each phrase to a
+    running average of the voice heard so far *in this run*, so it's enough
+    to split remote speech into separate bubbles without claiming to know
+    who's who. Averaging over the run (instead of only the single previous
+    phrase) smooths out the noisy embeddings that very short phrases produce,
+    which otherwise trip false "changes" mid-sentence."""
+
+    def __init__(self, emb_model):
+        import sherpa_onnx as so
+        self.ext = so.SpeakerEmbeddingExtractor(
+            so.SpeakerEmbeddingExtractorConfig(model=str(emb_model), num_threads=1))
+        self.reset()
+
+    def reset(self):
+        self._run_sum = None    # sum of unit embeddings seen in the current run
+        self._run_count = 0
+
+    def _embed_unit(self, audio):
+        s = self.ext.create_stream()
+        s.accept_waveform(SAMPLE_RATE, audio)
+        s.input_finished()
+        emb = np.asarray(self.ext.compute(s), dtype=np.float32)
+        norm = np.linalg.norm(emb)
+        return emb / norm if norm > 1e-9 else emb
+
+    def changed(self, audio):
+        """True if this phrase looks like a different voice than the current run."""
+        if audio.size / SAMPLE_RATE < MIN_VOICE_CHANGE_DURATION:
+            return False
+        emb = self._embed_unit(audio)
+        is_change = False
+        if self._run_sum is not None:
+            avg = self._run_sum / self._run_count
+            avg_norm = np.linalg.norm(avg)
+            sim = float(np.dot(emb, avg) / avg_norm) if avg_norm > 1e-9 else 0.0
+            is_change = sim < VOICE_CHANGE_THRESHOLD
+        if is_change or self._run_sum is None:
+            self._run_sum = emb.copy()
+            self._run_count = 1
+        else:
+            self._run_sum += emb
+            self._run_count += 1
+        return is_change
 
 
 def transcribe_utterance(model, audio):

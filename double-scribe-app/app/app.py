@@ -24,15 +24,17 @@ ICON = HERE / "icon.ico"   # WebView2 needs a Windows .ico for the window icon
 def _smoke_test():
     """Headless self-test for the packaged build (set DS_SMOKE=1).
 
-    Runs the normal boot path with no window -- loads Whisper from the bundled
-    model on CPU and initialises the store -- then writes the outcome to
-    <DATA_DIR>/smoke.txt and exits 0 on success, 2 on failure. Inert in normal
-    use; lets a build be verified without a console or real audio.
+    Runs the normal boot path with no window -- downloads the model if needed,
+    loads Whisper on CPU, and initialises the store -- then writes the outcome
+    to <DATA_DIR>/smoke.txt and exits 0 on success, 2 on failure. Inert in
+    normal use; lets a build be verified without a console or real audio.
     """
     import transcriber as core
     api = Api()
     api.boot()                      # _window is None -> UI pushes are no-ops
-    result = f"ready={api._ready}\nstatus={api._status}\nmodel={core.BUNDLED_WHISPER}\n"
+    voice_split = api.engine.voice_detector is not None
+    result = (f"ready={api._ready}\nstatus={api._status}\nmodel={core.MODEL_DIR}\n"
+              f"voice_split={voice_split}\n")
     try:
         (core.DATA_DIR / "smoke.txt").write_text(result, encoding="utf-8")
     except Exception:

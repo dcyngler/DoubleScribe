@@ -1,6 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-PyInstaller spec for Double Scribe (CPU-only, offline, Whisper 'small' bundled).
+PyInstaller spec for Double Scribe (CPU-only, offline once the model is downloaded).
 
 Build:  .venv\Scripts\pyinstaller.exe DoubleScribe.spec --noconfirm
 Output: dist\DoubleScribe\DoubleScribe.exe  (onedir)
@@ -8,11 +8,19 @@ Output: dist\DoubleScribe\DoubleScribe.exe  (onedir)
 Notes
 - CPU-only: the NVIDIA CUDA wheels are NOT collected (see excludes). transcriber.load_model
   runs CPU/int8 when frozen, so no GPU libraries are needed on the target machine.
-- Offline: the Whisper 'small' model is staged in build_assets/whisper-small and bundled to
-  <app>/whisper-small; transcriber.BUNDLED_WHISPER loads it directly (no HuggingFace download).
+- Model is NOT bundled: the Whisper 'small' model is downloaded on first run into
+  %LOCALAPPDATA%\DoubleScribe\models (see transcriber.ensure_model), keeping the installer
+  small. Every run after the first is fully offline again.
+- The "Them" voice-change split (app/engine.py's VoiceChangeDetector) needs sherpa_onnx +
+  models/nemo_en_titanet_small.onnx. Unlike Whisper, this model is small (~38MB) so it IS
+  bundled at build time -- no first-run download for it. If models/nemo_en_titanet_small.onnx
+  hasn't been fetched on the build machine (see CLAUDE.md), it's simply left out and the
+  feature no-ops at runtime exactly as it does today when the file is missing.
 - The two Tkinter engine modules (transcriber.py, live_transcriber.py) live one level up from
   app/, so pathex includes the repo root and app/ for the analysis to find them.
 """
+
+from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_all
 
@@ -20,7 +28,6 @@ datas = [
     ('app/web', 'web'),               # HTML/CSS/JS frontend
     ('app/icon.ico', '.'),            # window / taskbar icon (WebView2 needs .ico)
     ('app/icon.png', '.'),
-    ('build_assets/whisper-small', 'whisper-small'),   # offline Whisper model
 ]
 binaries = []
 hiddenimports = [
@@ -29,10 +36,19 @@ hiddenimports = [
     'api', 'engine', 'store',
 ]
 
+# Voice-embedding model for the "Them" voice-change split -- optional, bundled only if the
+# developer has already fetched it (see CLAUDE.md gotchas); silently skipped otherwise.
+_voice_model = Path('models/nemo_en_titanet_small.onnx')
+if _voice_model.exists():
+    datas.append((str(_voice_model), 'models'))
+else:
+    print(f"[spec] {_voice_model} not found -- voice-change split will be disabled in this build")
+
 # Packages with data files / native DLLs that PyInstaller can't fully trace statically.
-# pywebview pulls in the WebView2 + WinForms host DLLs; pythonnet ships Python.Runtime.dll.
+# pywebview pulls in the WebView2 + WinForms host DLLs; pythonnet ships Python.Runtime.dll;
+# sherpa_onnx ships a compiled extension module for the voice-change split.
 for pkg in ('faster_whisper', 'ctranslate2', 'soundcard', 'webview',
-            'clr_loader', 'pythonnet', 'cffi'):
+            'clr_loader', 'pythonnet', 'cffi', 'sherpa_onnx'):
     try:
         d, b, h = collect_all(pkg)
         datas += d
@@ -51,7 +67,6 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
-        'sherpa_onnx',        # diarisation not used by the new UI; imported lazily only
         'nvidia',             # CPU-only build: no CUDA wheels
         'torch', 'tensorflow', 'jax',
         'matplotlib', 'pandas', 'scipy',

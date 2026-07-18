@@ -19,8 +19,9 @@ engine and must keep working — treat them as stable; the new UI reuses them.
 
 ## Environment (important — bleeding edge)
 - **Python 3.14** in `.venv` (`.venv\Scripts\python.exe`, `pythonw.exe` for no-console).
-- Key deps: `faster-whisper` (+`ctranslate2`), `soundcard`, `sherpa-onnx` (installed but the
-  new UI no longer uses it), `pywebview`(+`pythonnet`), `numpy`, `pillow`, `pywin32`.
+- Key deps: `faster-whisper` (+`ctranslate2`), `soundcard`, `sherpa-onnx` (speaker embeddings —
+  full diarisation in the Tkinter apps, lightweight "Them" voice-change split in the new UI),
+  `pywebview`(+`pythonnet`), `numpy`, `pillow`, `pywin32`.
 - GPU: `nvidia-*-cu12` wheels present (~1.9 GB) → Whisper runs on the RTX Blackwell GPU,
   falls back to CPU automatically. `transcriber._add_nvidia_dll_dirs()` puts the CUDA DLLs
   on PATH (CTranslate2 needs PATH, not just add_dll_directory).
@@ -29,10 +30,17 @@ engine and must keep working — treat them as stable; the new UI reuses them.
 
 ## New UI architecture (`app/`)
 - `engine.py` — headless controller. **Reuses** `live_transcriber.LiveChannel`,
-  `transcribe_utterance`, `END_SILENCE_*`, and `transcriber.load_model` / `group_turns`.
+  `transcribe_utterance`, `END_SILENCE_*`, and `transcriber.load_model`. Its own local
+  `_group_turns()` (not `transcriber.group_turns`) merges consecutive same-label phrases,
+  same as before, but a `voice_change`-flagged "Them" phrase always starts a new turn.
   `start(out_index=-1, in_index=-1)` → **-1 = Auto: capture ALL outputs + ALL mics**; silent
   devices produce nothing, active one transcribes; a dedupe window drops duplicate phrases.
-  Labels are only **Me** (mic) / **Them** (speakers) — per-speaker matching is OFF.
+  Labels are only **Me** (mic) / **Them** (speakers) — no naming/identity across the call.
+  `load_speaker_model()` loads `live.VoiceChangeDetector` (needs `sherpa-onnx` +
+  `models/nemo_en_titanet_small.onnx` — see gotchas); each "Them" phrase is embedded and
+  cosine-compared only to the *previous* "Them" phrase, so a different remote voice gets its
+  own bubble without ever naming/re-recognising speakers. If the model/package is missing,
+  `voice_detector` stays `None` and it silently falls back to one merged "Them" bubble.
 - `store.py` — owns `index.json` (metadata: title/tags/folders/favourite/preview). Auto-imports
   existing `transcripts/*.txt`. `get_transcript()` returns `{meta, body, messages}` where
   `messages` = `[{who:'me'|'them', text}]` for chat bubbles. `_collapse_speakers()` maps any
@@ -67,17 +75,30 @@ Windows console is cp1252 — emoji/✓ crash `print`).
 
 ## Known gotchas
 - Python 3.14 is new: check wheels exist before adding deps (`pip install --dry-run <pkg>`).
+- `models/` is gitignored (see `.gitignore`), so on a fresh clone `sherpa-onnx` is installed
+  but `models/nemo_en_titanet_small.onnx` doesn't exist — the new UI's "Them" voice-change
+  split (and the Tkinter apps' diarisation) silently no-op until it's fetched:
+  `curl -L -o models/nemo_en_titanet_small.onnx https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/nemo_en_titanet_small.onnx`.
+  `DoubleScribe.spec` now bundles `sherpa_onnx` + this model (it's only ~38MB, so unlike
+  Whisper it's bundled at build time, not downloaded) *if* it's present on the build machine
+  when you run PyInstaller — verified working end-to-end via `DS_SMOKE=1` (`voice_split=True`
+  in `smoke.txt`). If the file is missing at build time, the spec just skips it and the
+  installed .exe falls back to one merged "Them" bubble, same as running from source without it.
 - Fresh-process GPU start is slow (~4–10 s cold cuDNN); Whisper "ready" then usable.
 - Setting a shortcut's AppUserModelID: use `propsys.SHGetPropertyStoreFromParsingName(path, None, 2, IID_IPropertyStore)` — the `IPersistFile.Save` route returned Access Denied.
-- Distribution (done): CPU-only, offline, Whisper "small" bundled. Two build files at repo root:
-  - `DoubleScribe.spec` — PyInstaller onedir. Excludes the NVIDIA CUDA wheels and `sherpa_onnx`;
-    bundles `app/web`, the icon, and the model staged in `build_assets/whisper-small/`.
+- Distribution (done): CPU-only. Whisper "small" is **not** bundled — it downloads on first run
+  (see below) to keep the installer small. Two build files at repo root:
+  - `DoubleScribe.spec` — PyInstaller onedir. Excludes the NVIDIA CUDA wheels; bundles `app/web`,
+    the icon, `sherpa_onnx`, and the voice-change model (no Whisper model — see above).
     Build: `.venv\Scripts\pyinstaller.exe DoubleScribe.spec --noconfirm` → `dist\DoubleScribe\`.
   - `DoubleScribe.iss` — Inno Setup, per-user (no admin). Compile with
     `"%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" DoubleScribe.iss` → `installer\DoubleScribeSetup.exe`.
   - Packaging-aware paths live in `transcriber.py`: `RESOURCE_DIR` (=`sys._MEIPASS` when frozen),
     `DATA_DIR` (=`%LOCALAPPDATA%\DoubleScribe` when frozen — transcripts + index.json go here,
-    never in the install dir), `BUNDLED_WHISPER`, and `load_model` forces CPU/int8 when frozen.
-  - Verify a build headlessly: `set DS_SMOKE=1 && DoubleScribe.exe` loads the model on CPU and
-    writes `ready=…/status=…` to `%LOCALAPPDATA%\DoubleScribe\smoke.txt` (the hook is in `app/app.py`).
+    never in the install dir), `MODEL_DIR` (=`DATA_DIR/models/whisper-small`, downloaded by
+    `ensure_model()` on first run via `faster_whisper.download_model`, then reused offline every
+    run after), and `load_model` forces CPU/int8 when frozen.
+  - Verify a build headlessly: `set DS_SMOKE=1 && DoubleScribe.exe` downloads the model if needed,
+    loads it on CPU, and writes `ready=…/status=…` to `%LOCALAPPDATA%\DoubleScribe\smoke.txt`
+    (the hook is in `app/app.py`) — the first smoke run needs internet access.
   - Unsigned exe may be flagged by corporate AV; WebView2 is needed on target (ships with Windows 11).

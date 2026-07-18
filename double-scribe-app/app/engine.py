@@ -21,7 +21,8 @@ if str(_PARENT) not in sys.path:
     sys.path.insert(0, str(_PARENT))
 
 import transcriber as core            # load_model, group_turns, TRANSCRIPT_DIR, DIAR_EMB_MODEL
-import live_transcriber as live       # LiveChannel, SpeakerTracker, transcribe_utterance, constants
+import live_transcriber as live       # LiveChannel, VoiceChangeDetector, transcribe_utterance, constants
+import profanity_filter
 
 SAMPLE_RATE = live.SAMPLE_RATE
 
@@ -49,16 +50,17 @@ class LiveEngine:
         self.on_saved = on_saved or (lambda meta: None)
 
         self.model = None
-        self.tracker = None
+        self.voice_detector = None
         self.recording = False
+        self.censor_profanity = False
 
         self.channels = []
         self.stop_event = None
         self.work_q = None
         self._worker_thread = None
-        self._session_tracker = None   # tracker snapshot for the current session
+        self._session_detector = None  # voice detector snapshot for the current session
         self._recent = []              # recent phrases, for duplicate suppression
-        self.session = []              # [(label, text), ...]
+        self.session = []              # [(label, text, voice_change), ...]
 
         self._start_ts = None
         self._elapsed = 0
@@ -73,13 +75,15 @@ class LiveEngine:
         return self.model is not None
 
     def load_speaker_model(self):
-        """Load the speaker-ID model (slow ONNX cold-start) in the background."""
+        """Load the voice-change model (slow ONNX cold-start) in the background.
+        No naming/identity -- just enough to tell 'Them' phrases apart so a
+        different remote voice gets its own bubble."""
         try:
             if core.DIAR_EMB_MODEL.exists():
-                self.tracker = live.SpeakerTracker(core.DIAR_EMB_MODEL)
+                self.voice_detector = live.VoiceChangeDetector(core.DIAR_EMB_MODEL)
         except Exception:
-            self.tracker = None
-        return self.tracker is not None
+            self.voice_detector = None
+        return self.voice_detector is not None
 
     # -- devices ------------------------------------------------------------
     def list_devices(self):
@@ -101,7 +105,7 @@ class LiveEngine:
             "inputs": [{"name": m.name} for m in self._mics],
             "output_default": out_default,
             "input_default": in_default,
-            "has_speaker_id": self.tracker is not None,
+            "has_voice_split": self.voice_detector is not None,
         }
 
     # -- start / stop -------------------------------------------------------
@@ -145,8 +149,8 @@ class LiveEngine:
         self._recent = []
         self.stop_event = threading.Event()
         self.work_q = queue.Queue()
-        if self.tracker:
-            self.tracker.reset()
+        if self.voice_detector:
+            self.voice_detector.reset()
 
         self.channels = [
             live.LiveChannel(lambda d=dev: d, label, self.work_q, self.stop_event, sil)
@@ -155,7 +159,7 @@ class LiveEngine:
         for c in self.channels:
             c.start()
 
-        self._session_tracker = self.tracker   # snapshot so a session is consistent
+        self._session_detector = self.voice_detector   # snapshot so a session is consistent
         self.recording = True
         self._start_ts = datetime.datetime.now()
         self._worker_thread = threading.Thread(target=self._worker, daemon=True)
@@ -175,6 +179,8 @@ class LiveEngine:
             text = live.transcribe_utterance(self.model, audio)
             if not text:
                 continue
+            if self.censor_profanity:
+                text = profanity_filter.censor(text)
             # suppress duplicates: the same phrase captured by two devices at once
             norm = " ".join(text.lower().split())
             now = time.monotonic()
@@ -183,8 +189,16 @@ class LiveEngine:
                 continue
             self._recent.append((label, norm, now))
             # Labels stay as the physical source: "Me" (mic) or "Them" (speakers).
-            self.session.append((label, text))
-            self.on_phrase(label, text)
+            # A "Them" phrase that sounds like a different voice than the last
+            # one gets flagged, so the UI can start a new bubble -- no naming.
+            voice_change = False
+            if label == "Them" and self._session_detector:
+                try:
+                    voice_change = self._session_detector.changed(audio)
+                except Exception:
+                    voice_change = False
+            self.session.append((label, text, voice_change))
+            self.on_phrase(label, text, voice_change)
 
     def elapsed_seconds(self):
         if not self._start_ts:
@@ -212,7 +226,7 @@ class LiveEngine:
         """Write live-YYYYMMDD-HHMMSS.txt exactly like the existing tool."""
         started = self._start_ts or datetime.datetime.now()
         now = datetime.datetime.now()
-        preview_lines = [t for (_, t) in self.session][:2]
+        preview_lines = [t for (_, t, _) in self.session][:2]
         meta = {
             "filename": None,
             "duration_seconds": self._elapsed,
@@ -225,7 +239,7 @@ class LiveEngine:
 
         core.TRANSCRIPT_DIR.mkdir(exist_ok=True)
         fname = core.TRANSCRIPT_DIR / f"live-{now:%Y%m%d-%H%M%S}.txt"
-        turns = core.group_turns([(i, lbl, txt) for i, (lbl, txt) in enumerate(self.session)])
+        turns = _group_turns(self.session)
         with open(fname, "w", encoding="utf-8") as fh:
             fh.write(f"Live transcript -- {now:%Y-%m-%d %H:%M:%S}\n")
             fh.write("=" * 40 + "\n\n")

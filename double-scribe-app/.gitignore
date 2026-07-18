@@ -3,6 +3,7 @@
 # ---------------------------------------------------------------------------
 transcripts/
 index.json
+settings.json
 *.txt.bak
 
 # ---------------------------------------------------------------------------
@@ -23,8 +24,9 @@ installer/
 # ---------------------------------------------------------------------------
 # Model weights — too large for git; re-staged at build time.
 #   build_assets/whisper-small : Whisper model, copied from the HuggingFace cache
-#   models/                    : sherpa diariser ONNX (only the Tkinter apps use it)
-# Remove the "models/" line if you want the diariser to work on a fresh clone.
+#   models/                    : sherpa ONNX models -- Tkinter diariser + the new app's
+#                                "Them" voice-change split both need nemo_en_titanet_small.onnx
+# Remove the "models/" line if you want these features to work on a fresh clone.
 # ---------------------------------------------------------------------------
 build_assets/
 models/

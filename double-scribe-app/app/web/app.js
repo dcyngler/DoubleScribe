@@ -88,6 +88,11 @@ function init() {
   api().get_library().then(lib => { S.library = lib; renderSidebar(); renderList(); });
   loadDevices();   // device pills/modal don't need the model — show them right away
   pollStatus();
+  $("updateLink").addEventListener("click", (e) => {
+    e.preventDefault();
+    if (e.currentTarget._url) api().open_url(e.currentTarget._url);
+  });
+  api().get_version().then(v => { $("statusbarVersion").textContent = `Double Scribe v${v}`; });
 }
 window.addEventListener("pywebviewready", init);
 document.addEventListener("DOMContentLoaded", () => { if (window.pywebview) init(); });
@@ -110,11 +115,21 @@ function setStatusMsg(msg) {
 window.onLibrary = (lib) => { S.library = lib; renderSidebar(); if (!S.recording) renderList(); };
 window.onReady = (devices) => { S.ready = true; $("startBtn").disabled = false; setDevices(devices); };
 window.onStatus = (msg) => setStatusMsg(msg);
-window.onPhrase = (label, text) => appendLive(label, text);
+window.onPhrase = (label, text, voiceChange) => appendLive(label, text, voiceChange);
 window.onSaved = (entry) => finishRecording(entry);
+window.onUpdateAvailable = (info) => {
+  const link = $("updateLink");
+  $("updateVersion").textContent = `v${info.version}`;
+  link._url = info.url;
+  link.classList.remove("hidden");
+};
 
 /* ---------- devices ---------- */
 function loadDevices() { api().get_devices().then(setDevices); }
+function loadAppSettings() {
+  api().get_version().then(v => { $("settingsVersion").textContent = `v${v}`; });
+  api().get_settings().then(s => { $("profanityToggle").checked = !!s.profanity_filter; });
+}
 function setDevices(dev) {
   if (!dev) return;
   S.devices = dev;
@@ -124,8 +139,8 @@ function setDevices(dev) {
   is.innerHTML = autoOpt + dev.inputs.map((o, i) => `<option value="${i}">${esc(o.name)}</option>`).join("");
   os.value = String(S.selOut); is.value = String(S.selIn);
   $("devStatus").classList.toggle("ok", dev.outputs.length > 0 && dev.inputs.length > 0);
-  $("devStatusText").textContent = dev.has_speaker_id
-    ? "Ready — capturing all devices, speaker ID on" : "Ready — capturing all devices";
+  $("devStatusText").textContent = dev.has_voice_split
+    ? "Ready — capturing all devices, voice split on" : "Ready — capturing all devices";
   setDevicePillsFromSel();
 }
 
@@ -344,10 +359,10 @@ function tickTimer() {
   const sec = Math.floor((Date.now() - S.recStart) / 1000);
   $("recTimer").textContent = `${d2(Math.floor(sec / 60))}:${d2(sec % 60)}`;
 }
-function appendLive(label, text) {
+function appendLive(label, text, voiceChange) {
   const body = $("liveBody");
   const who = label === "Me" ? "me" : "them";   // side/colour conveys the speaker
-  if (who === S.liveLast && S.liveEl) {
+  if (who === S.liveLast && S.liveEl && !voiceChange) {
     S.liveEl.textContent += " " + text;          // coalesce same-speaker phrases
   } else {
     const b = document.createElement("div");
@@ -471,6 +486,14 @@ function bindUI() {
   $("refreshDevices").onclick = () => api().get_devices().then(setDevices);
   $("outSelect").onchange = e => { S.selOut = parseInt(e.target.value, 10); setDevicePillsFromSel(); };
   $("inSelect").onchange = e => { S.selIn = parseInt(e.target.value, 10); setDevicePillsFromSel(); };
+
+  $("appSettingsBtn").onclick = () => { $("appSettingsModal").classList.remove("hidden"); loadAppSettings(); };
+  $("appSettingsClose").onclick = () => $("appSettingsModal").classList.add("hidden");
+  $("profanityToggle").onchange = e => {
+    api().set_profanity_filter(e.target.checked)
+      .then(() => toast(e.target.checked ? "Profanity filter on" : "Profanity filter off"));
+  };
+  $("githubBtn").onclick = () => api().get_paths().then(p => api().open_url(p.source_url));
 
   // event delegation for nav
   $("nav").addEventListener("click", e => {

@@ -9,6 +9,7 @@
 </head>
 <body>
 <div id="app">
+<div class="app-row">
 
   <!-- Sidebar -->
   <aside class="sidebar">
@@ -48,6 +49,10 @@
     </nav>
 
     <div class="sidebar-foot">
+      <button class="settings-btn" id="appSettingsBtn">
+        <svg viewBox="0 0 24 24" class="ico"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h5"/></svg>
+        <span>App settings</span>
+      </button>
       <button class="settings-btn" id="audioSettingsBtn">
         <svg viewBox="0 0 24 24" class="ico"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 0 0-1.7-1L14.5 3h-5l-.3 2.5a7 7 0 0 0-1.7 1l-2.4-1-2 3.5 2 1.5a7 7 0 0 0 0 2l-2 1.5 2 3.5 2.4-1a7 7 0 0 0 1.7 1L9.5 21h5l.3-2.5a7 7 0 0 0 1.7-1l2.4 1 2-3.5-2-1.5a7 7 0 0 0 .1-1z"/></svg>
         <span>Audio settings</span>
@@ -146,6 +151,59 @@
       </section>
     </div>
   </main>
+</div>
+
+<!-- Status bar -->
+<footer class="statusbar">
+  <span class="statusbar-version" id="statusbarVersion">Double Scribe</span>
+  <a class="statusbar-update hidden" id="updateLink" href="#" title="Open release page">
+    Update available &bull; <span id="updateVersion"></span>
+  </a>
+</footer>
+</div>
+
+<!-- App settings modal -->
+<div class="modal-overlay hidden" id="appSettingsModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>App settings</h2>
+      <button class="btn-icon" id="appSettingsClose">&times;</button>
+    </div>
+
+    <div class="settings-row">
+      <span class="settings-row-label">Application language
+        <svg viewBox="0 0 24 24" class="settings-info" title="Only English is available at the moment."><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="7.5" r="0.6" fill="currentColor" stroke="none"/></svg>
+      </span>
+      <select class="settings-select" id="settingsLanguage" disabled>
+        <option>English (US)</option>
+      </select>
+    </div>
+
+    <div class="settings-row">
+      <span class="settings-row-label">Filter profanity</span>
+      <label class="switch">
+        <input type="checkbox" id="profanityToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="settings-row">
+      <span class="settings-row-label">Version</span>
+      <span class="settings-value" id="settingsVersion">—</span>
+    </div>
+
+    <div class="settings-row">
+      <span class="settings-row-label">Support development
+        <svg viewBox="0 0 24 24" class="settings-info" title="Donation link coming soon."><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="7.5" r="0.6" fill="currentColor" stroke="none"/></svg>
+      </span>
+      <button class="btn-secondary btn-donate" id="donateBtn" disabled title="Coming soon">Donate</button>
+    </div>
+
+    <div class="settings-row">
+      <span class="settings-row-label">Source code</span>
+      <button class="btn-secondary" id="githubBtn">View on GitHub</button>
+    </div>
+  </div>
 </div>
 
 <!-- Audio settings modal -->

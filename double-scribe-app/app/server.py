@@ -33,7 +33,8 @@ ALLOWED_METHODS = {
     "get_status", "get_library", "get_devices", "get_transcript", "search",
     "start", "set_pending_title", "stop", "set_title", "add_tag", "remove_tag",
     "create_folder", "set_folder", "toggle_favourite", "remove_from_library",
-    "export_txt",
+    "export_txt", "get_version", "open_url",
+    "get_settings", "set_profanity_filter", "get_paths",
 }
 
 BRIDGE_TAG = '<script src="bridge.js"></script>\n<script src="app.js"></script>'

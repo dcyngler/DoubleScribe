@@ -49,6 +49,7 @@ _add_nvidia_dll_dirs()
 
 # Lightweight startup log so we can diagnose hangs even under pythonw (no console).
 _LOG_FILE = Path(__file__).parent / "startup.log"
+LOG_FILE = _LOG_FILE   # public alias -- App settings' "Log Directory" row reads this
 
 
 def _log(msg):
@@ -95,12 +96,6 @@ def _data_dir():
 RESOURCE_DIR = _resource_dir()
 DATA_DIR = _data_dir()
 
-if getattr(sys, "frozen", False):
-    # Belt-and-braces: the packaged build is fully offline; never reach out to
-    # the HuggingFace hub even if a model name (rather than a path) is used.
-    os.environ.setdefault("HF_HUB_OFFLINE", "1")
-    os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
-
 # ---------------------------------------------------------------------------
 # Settings -- tweak these to taste
 # ---------------------------------------------------------------------------
@@ -112,7 +107,9 @@ SAVE_TRANSCRIPTS = True     # write each transcript to a .txt next to this scrip
 KEEP_AUDIO = False          # leave False: audio is never written to disk
 TRANSCRIPT_DIR = DATA_DIR / "transcripts"
 INDEX_PATH = DATA_DIR / "index.json"   # library metadata (owned by app/store.py)
-BUNDLED_WHISPER = RESOURCE_DIR / "whisper-small"   # offline model, present in packaged build
+# Downloaded on first run (not bundled -- keeps the installer small) and cached
+# here for every run after that. Writable per-user location, survives uninstall.
+MODEL_DIR = DATA_DIR / "models" / f"whisper-{MODEL_SIZE}"
 
 # -- Speaker identification (diarisation) ----------------------------------
 # Splits the "Them" channel into Speaker 1 / Speaker 2 / ... using small ONNX
@@ -179,6 +176,23 @@ def make_mic_recorder():
 # ---------------------------------------------------------------------------
 # Transcription
 # ---------------------------------------------------------------------------
+def ensure_model(status_cb):
+    """Make sure the Whisper model is on disk, downloading it once if needed.
+
+    Only relevant for the packaged build, which no longer bundles the model
+    (that was most of the ~500MB installer) -- it downloads into MODEL_DIR on
+    first run and reuses it on every run after (no network call once model.bin
+    exists). In dev mode this is a no-op: WhisperModel(MODEL_SIZE, ...) already
+    manages its own download/cache under ~/.cache/huggingface.
+    """
+    if not getattr(sys, "frozen", False) or (MODEL_DIR / "model.bin").exists():
+        return
+    status_cb(f"Downloading speech model '{MODEL_SIZE}' (one-time, ~460MB)...")
+    from faster_whisper import download_model
+    MODEL_DIR.parent.mkdir(parents=True, exist_ok=True)
+    download_model(MODEL_SIZE, output_dir=str(MODEL_DIR))
+
+
 def load_model(status_cb):
     """Load Whisper, preferring the GPU and falling back to CPU.
 
@@ -187,10 +201,11 @@ def load_model(status_cb):
     and the failure only shows up at inference time. Probing here means we fall
     back to CPU cleanly instead of crashing the first time you press Stop.
     """
+    ensure_model(status_cb)
     probe = (np.random.randn(8000).astype(np.float32)) * 0.01  # ~0.5s of quiet noise
-    # Packaged build ships the model on disk and is CPU-only (no CUDA wheels
-    # bundled); development loads by name and prefers the GPU.
-    ref = str(BUNDLED_WHISPER) if (BUNDLED_WHISPER / "model.bin").exists() else MODEL_SIZE
+    # Packaged build downloads the model to MODEL_DIR (see ensure_model above);
+    # development loads by name (from the HuggingFace cache) and prefers the GPU.
+    ref = str(MODEL_DIR) if (getattr(sys, "frozen", False) and (MODEL_DIR / "model.bin").exists()) else MODEL_SIZE
     devices = (("cpu", "int8"),) if getattr(sys, "frozen", False) \
         else (("cuda", "float16"), ("cpu", "int8"))
     for device, compute in devices:

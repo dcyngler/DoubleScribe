@@ -5,22 +5,40 @@ events back into the page. Owns a Store (metadata) and a LiveEngine (capture).
 
 import json
 import threading
+import urllib.request
+import webbrowser
 from pathlib import Path
 
 import webview
 
 from engine import LiveEngine
 from store import Store, TRANSCRIPT_DIR
+from settings import Settings
+
+APP_VERSION = "4.1.1"
+UPDATE_REPO = "dcyngler/livetranscription"   # GitHub repo checked for newer releases
+SOURCE_URL = f"https://github.com/{UPDATE_REPO}"
+
+
+def _version_tuple(v):
+    """'1.2.0' -> (1, 2, 0); non-numeric parts (e.g. 'v1.2.0-beta') become 0."""
+    parts = []
+    for p in v.split("."):
+        digits = "".join(ch for ch in p if ch.isdigit())
+        parts.append(int(digits) if digits else 0)
+    return tuple(parts)
 
 
 class Api:
     def __init__(self):
         self.store = Store()
+        self.settings = Settings()
         self.engine = LiveEngine(
             on_phrase=self._on_phrase,
             on_status=self._on_status,
             on_saved=self._on_saved,
         )
+        self.engine.censor_profanity = self.settings.get("profanity_filter")
         self._window = None
         self._ready = False
         self._status = "Starting up..."
@@ -32,6 +50,7 @@ class Api:
 
     def boot(self):
         """Runs on a background thread once the GUI is up."""
+        threading.Thread(target=self._check_for_update, daemon=True).start()
         try:
             self.store.auto_import()
         except Exception:
@@ -45,6 +64,8 @@ class Api:
         self._ready = True
         self._on_status("ready")
         self._emit("onReady", self.engine.list_devices())   # recording usable now
+        self.engine.load_speaker_model()   # slower ONNX cold-start; voice-split still optional
+        self._emit("onReady", self.engine.list_devices())  # refresh has_voice_split once loaded
 
     # -- event push (Python -> JS) -----------------------------------------
     def _emit(self, fn, *args):
@@ -56,8 +77,8 @@ class Api:
         except Exception:
             pass
 
-    def _on_phrase(self, label, text):
-        self._emit("onPhrase", label, text)
+    def _on_phrase(self, label, text, voice_change=False):
+        self._emit("onPhrase", label, text, voice_change)
 
     def _on_status(self, msg):
         self._status = msg
@@ -68,9 +89,46 @@ class Api:
         self._pending_title = ""
         self._emit("onSaved", entry)
 
+    def _check_for_update(self):
+        """Best-effort GitHub Releases check; silent no-op when offline or no releases exist yet."""
+        try:
+            req = urllib.request.Request(
+                f"https://api.github.com/repos/{UPDATE_REPO}/releases/latest",
+                headers={"User-Agent": "DoubleScribe", "Accept": "application/vnd.github+json"},
+            )
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            latest = (data.get("tag_name") or "").lstrip("vV")
+            if latest and _version_tuple(latest) > _version_tuple(APP_VERSION):
+                self._emit("onUpdateAvailable", {"version": latest, "url": data.get("html_url", "")})
+        except Exception:
+            pass
+
     # -- queries (JS -> Python) --------------------------------------------
     def get_status(self):
         return {"ready": self._ready, "message": self._status}
+
+    def get_version(self):
+        return APP_VERSION
+
+    def open_url(self, url):
+        try:
+            webbrowser.open(url)
+        except Exception:
+            pass
+        return True
+
+    def get_settings(self):
+        return self.settings.as_dict()
+
+    def set_profanity_filter(self, enabled):
+        enabled = bool(enabled)
+        self.settings.set("profanity_filter", enabled)
+        self.engine.censor_profanity = enabled
+        return True
+
+    def get_paths(self):
+        return {"source_url": SOURCE_URL}
 
     def get_library(self):
         return self.store.list()

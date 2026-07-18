@@ -1,4 +1,4 @@
-# Local Transcriber
+# Double Scribe
 
 A small, fully-offline tool that listens to your **computer's audio output**
 (what you hear) and your **microphone** (what you say), and turns it into a text

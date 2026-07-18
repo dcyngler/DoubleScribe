@@ -1,9 +1,9 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-PyInstaller spec for Live Transcriber (CPU-only, offline, Whisper 'small' bundled).
+PyInstaller spec for Double Scribe (CPU-only, offline, Whisper 'small' bundled).
 
-Build:  .venv\Scripts\pyinstaller.exe LiveTranscriber.spec --noconfirm
-Output: dist\LiveTranscriber\LiveTranscriber.exe  (onedir)
+Build:  .venv\Scripts\pyinstaller.exe DoubleScribe.spec --noconfirm
+Output: dist\DoubleScribe\DoubleScribe.exe  (onedir)
 
 Notes
 - CPU-only: the NVIDIA CUDA wheels are NOT collected (see excludes). transcriber.load_model
@@ -69,7 +69,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='LiveTranscriber',
+    name='DoubleScribe',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -90,5 +90,5 @@ coll = COLLECT(
     strip=False,
     upx=False,
     upx_exclude=[],
-    name='LiveTranscriber',
+    name='DoubleScribe',
 )

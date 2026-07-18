@@ -200,7 +200,7 @@ class LiveApp:
         self.speakers = []
         self.mics = []
 
-        root.title("Live Transcriber")
+        root.title("Double Scribe")
         root.geometry("700x620")
 
         self.toggle_btn = tk.Button(

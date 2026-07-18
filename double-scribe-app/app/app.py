@@ -1,5 +1,5 @@
 """
-Live Transcriber -- desktop UI bootstrap.
+Double Scribe -- desktop UI bootstrap.
 
 Renders the HTML/CSS/JS frontend in a native window (pywebview / WebView2) and
 wires it to the existing transcription engine via the Api bridge. Launched with
@@ -22,7 +22,7 @@ ICON = HERE / "icon.ico"   # WebView2 needs a Windows .ico for the window icon
 
 
 def _smoke_test():
-    """Headless self-test for the packaged build (set LT_SMOKE=1).
+    """Headless self-test for the packaged build (set DS_SMOKE=1).
 
     Runs the normal boot path with no window -- loads Whisper from the bundled
     model on CPU and initialises the store -- then writes the outcome to
@@ -41,7 +41,7 @@ def _smoke_test():
 
 
 def main():
-    if os.environ.get("LT_SMOKE") == "1":
+    if os.environ.get("DS_SMOKE") == "1":
         _smoke_test()
         return
 
@@ -49,13 +49,13 @@ def main():
     # instead of grouping under pythonw.exe and showing the generic Python icon.
     try:
         import ctypes
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("Bevington.LiveTranscriber")
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("Bevington.DoubleScribe")
     except Exception:
         pass
 
     api = Api()
     window = webview.create_window(
-        "Live Transcriber",
+        "Double Scribe",
         str(INDEX_HTML),
         js_api=api,
         width=1200,

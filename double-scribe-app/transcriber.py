@@ -86,7 +86,7 @@ def _resource_dir():
 def _data_dir():
     """Writable location for transcripts + index.json."""
     if getattr(sys, "frozen", False):
-        base = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "LiveTranscriber"
+        base = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "DoubleScribe"
         base.mkdir(parents=True, exist_ok=True)
         return base
     return Path(__file__).parent
@@ -391,7 +391,7 @@ class TranscriberApp:
         self._req_speakers = NUM_SPEAKERS
         self._speaker_tag_count = 0
 
-        root.title("Local Transcriber")
+        root.title("Double Scribe")
         root.geometry("680x560")
 
         self.toggle_btn = tk.Button(

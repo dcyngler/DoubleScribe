@@ -1,4 +1,4 @@
-# Live Transcriber — project guide (read me first)
+# Double Scribe — project guide (read me first)
 
 This file lets a fresh Claude Code session (or another engineer) pick up and update this
 app without re-learning it. Read this, then the file you need to change.
@@ -12,7 +12,7 @@ transcripts. Nothing is uploaded. There are **three** front-ends over one engine
 |---|---|---|
 | `Run.bat` | `transcriber.py` | Original Tkinter app — record, then transcribe at the end (has speaker diarisation) |
 | `Run_Live.bat` | `live_transcriber.py` | Tkinter live app — transcribes as you speak |
-| `Run_App.bat` / **"Live Transcriber"** shortcut | `app/` | **The main app** — polished pywebview UI (legacy-tool-style) |
+| `Run_App.bat` / **"Double Scribe"** shortcut | `app/` | **The main app** — polished pywebview UI |
 
 Most work now happens in **`app/`** (the new UI). The two Tkinter files are the working
 engine and must keep working — treat them as stable; the new UI reuses them.
@@ -39,7 +39,7 @@ engine and must keep working — treat them as stable; the new UI reuses them.
   old `Speaker N` → `Them` **for display only** (never rewrites files).
 - `api.py` — pywebview bridge (methods called from JS as `window.pywebview.api.*`) + pushes
   live events to JS via `window.evaluate_js`.
-- `app.py` — bootstrap. Sets `SetCurrentProcessExplicitAppUserModelID("Bevington.LiveTranscriber")`
+- `app.py` — bootstrap. Sets `SetCurrentProcessExplicitAppUserModelID("Bevington.DoubleScribe")`
   so the taskbar shows our name/icon; `webview.start(icon="app/icon.ico")` (WebView2 needs `.ico`).
 - `web/index.html`, `web/styles.css`, `web/app.js` — the frontend (sidebar/list/detail + live
   view). Transcript shows as **chat bubbles**: Me = right, brand blue `#0033CC`; Them = left,
@@ -70,14 +70,14 @@ Windows console is cp1252 — emoji/✓ crash `print`).
 - Fresh-process GPU start is slow (~4–10 s cold cuDNN); Whisper "ready" then usable.
 - Setting a shortcut's AppUserModelID: use `propsys.SHGetPropertyStoreFromParsingName(path, None, 2, IID_IPropertyStore)` — the `IPersistFile.Save` route returned Access Denied.
 - Distribution (done): CPU-only, offline, Whisper "small" bundled. Two build files at repo root:
-  - `LiveTranscriber.spec` — PyInstaller onedir. Excludes the NVIDIA CUDA wheels and `sherpa_onnx`;
+  - `DoubleScribe.spec` — PyInstaller onedir. Excludes the NVIDIA CUDA wheels and `sherpa_onnx`;
     bundles `app/web`, the icon, and the model staged in `build_assets/whisper-small/`.
-    Build: `.venv\Scripts\pyinstaller.exe LiveTranscriber.spec --noconfirm` → `dist\LiveTranscriber\`.
-  - `LiveTranscriber.iss` — Inno Setup, per-user (no admin). Compile with
-    `"%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" LiveTranscriber.iss` → `installer\LiveTranscriberSetup.exe`.
+    Build: `.venv\Scripts\pyinstaller.exe DoubleScribe.spec --noconfirm` → `dist\DoubleScribe\`.
+  - `DoubleScribe.iss` — Inno Setup, per-user (no admin). Compile with
+    `"%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" DoubleScribe.iss` → `installer\DoubleScribeSetup.exe`.
   - Packaging-aware paths live in `transcriber.py`: `RESOURCE_DIR` (=`sys._MEIPASS` when frozen),
-    `DATA_DIR` (=`%LOCALAPPDATA%\LiveTranscriber` when frozen — transcripts + index.json go here,
+    `DATA_DIR` (=`%LOCALAPPDATA%\DoubleScribe` when frozen — transcripts + index.json go here,
     never in the install dir), `BUNDLED_WHISPER`, and `load_model` forces CPU/int8 when frozen.
-  - Verify a build headlessly: `set LT_SMOKE=1 && LiveTranscriber.exe` loads the model on CPU and
-    writes `ready=…/status=…` to `%LOCALAPPDATA%\LiveTranscriber\smoke.txt` (the hook is in `app/app.py`).
+  - Verify a build headlessly: `set DS_SMOKE=1 && DoubleScribe.exe` loads the model on CPU and
+    writes `ready=…/status=…` to `%LOCALAPPDATA%\DoubleScribe\smoke.txt` (the hook is in `app/app.py`).
   - Unsigned exe may be flagged by corporate AV; WebView2 is needed on target (ships with Windows 11).

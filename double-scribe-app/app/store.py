@@ -182,19 +182,53 @@ class Store:
         body = _collapse_speakers(self._file_body(t["filename"]))
         return {"meta": self._view(t), "body": body, "messages": parse_messages(body)}
 
-    def search(self, query):
+    def search(self, query, filters=None):
         q = (query or "").strip().lower()
-        if not q:
-            return self.list()["transcripts"]
+        f = filters or {}
+        tags = f.get("tags") or []
+        folder = f.get("folder") or None
+        favourite_only = bool(f.get("favourite"))
+        date_from = f.get("date_from") or None
+        date_to = f.get("date_to") or None
+        dur_min = f.get("duration_min")
+        dur_max = f.get("duration_max")
+        sort = f.get("sort") or "newest"
+
         hits = []
         for t in self.data["transcripts"]:
             if t.get("archived"):
                 continue
-            hay = " ".join([t.get("title", ""), " ".join(t.get("tags", [])),
-                            self._file_body(t["filename"])]).lower()
-            if q in hay:
-                hits.append(t)
-        hits.sort(key=lambda t: t.get("created") or "", reverse=True)
+            if q:
+                hay = " ".join([t.get("title", ""), " ".join(t.get("tags", [])),
+                                self._file_body(t["filename"])]).lower()
+                if q not in hay:
+                    continue
+            if tags and not any(tag in t.get("tags", []) for tag in tags):
+                continue
+            if folder and t.get("folder") != folder:
+                continue
+            if favourite_only and not t.get("favourite"):
+                continue
+            created = t.get("created") or ""
+            if date_from and created[:10] < date_from:
+                continue
+            if date_to and created[:10] > date_to:
+                continue
+            dur = t.get("duration_seconds")
+            if dur_min is not None and (dur is None or dur < dur_min * 60):
+                continue
+            if dur_max is not None and (dur is None or dur > dur_max * 60):
+                continue
+            hits.append(t)
+
+        sort_keys = {
+            "newest": (lambda t: t.get("created") or "", True),
+            "oldest": (lambda t: t.get("created") or "", False),
+            "longest": (lambda t: t.get("duration_seconds") or 0, True),
+            "shortest": (lambda t: t.get("duration_seconds") or 0, False),
+        }
+        key, reverse = sort_keys.get(sort, sort_keys["newest"])
+        hits.sort(key=key, reverse=reverse)
         return [self._view(t) for t in hits]
 
     # -- record a freshly finished session ---------------------------------

@@ -81,8 +81,8 @@ class Api:
     def get_transcript(self, tid):
         return self.store.get_transcript(tid)
 
-    def search(self, query):
-        return self.store.search(query)
+    def search(self, query, filters=None):
+        return self.store.search(query, filters)
 
     # -- recording ----------------------------------------------------------
     def start(self, out_index, in_index, title=""):

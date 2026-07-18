@@ -5,11 +5,13 @@ const S = {
   library: { transcripts: [], folders: [], tags: [] },
   view: { type: "all", value: null },
   selectedId: null,
+  detailFullscreen: false,
   ready: false,
   recording: false,
   devices: null,
   selOut: -1, selIn: -1,   // -1 = Auto (capture all devices)
   search: "",
+  filters: { tags: [], folder: "", favourite: false, dateFrom: "", dateTo: "", durMin: "", durMax: "", sort: "newest" },
   recStart: 0, recTimer: null,
   liveLast: null, liveEl: null,
 };
@@ -149,7 +151,7 @@ function renderSidebar() {
 
 function setView(type, value) {
   S.view = { type, value: value || null };
-  S.search = ""; $("searchBar").classList.add("hidden"); $("searchInput").value = "";
+  S.search = ""; $("searchBar").classList.add("hidden"); $("searchInput").value = ""; resetFilters();
   closeDetail();
   const titles = { all: "All transcripts", favourites: "Favourites",
     tag: "#" + (value || ""), folder: value || "" };
@@ -179,7 +181,7 @@ function renderCards(items) {
     html += `<div class="card ${t.id === S.selectedId ? "sel" : ""}" data-id="${t.id}">
       <div class="card-actions">
         <button class="btn-icon" data-act="copy" title="Copy">⧉</button>
-        <button class="btn-icon" data-act="move" title="Move to folder">🗂</button>
+        <button class="btn-icon" data-act="move" title="Move to folder"><img class="folder-ico" src="folder-icon.png" alt=""></button>
         <button class="btn-icon star ${t.favourite ? "on" : ""}" data-act="fav" title="Favourite">★</button>
         <button class="btn-icon" data-act="del" title="Remove from library">🗑</button>
       </div>
@@ -209,8 +211,18 @@ function openDetail(tid) {
 }
 function closeDetail() {
   S.selectedId = null;
+  setDetailFullscreen(false);
   document.querySelector(".body").classList.remove("detail-open");
   $("detailPanel").classList.add("hidden");
+}
+function setDetailFullscreen(on) {
+  S.detailFullscreen = on;
+  $("app").classList.toggle("detail-fs", on);
+  const btn = $("detailFullscreen"); if (!btn) return;
+  btn.title = on ? "Exit full screen" : "Full screen";
+  btn.innerHTML = on
+    ? `<svg viewBox="0 0 24 24" class="ico"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>`
+    : `<svg viewBox="0 0 24 24" class="ico"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>`;
 }
 function renderDetail(res) {
   const t = res.meta;
@@ -219,8 +231,11 @@ function renderDetail(res) {
   const tags = (t.tags || []).map(x =>
     `<span class="tagpill">${esc(x)}<button data-tag="${esc(x)}" title="Remove">×</button></span>`).join("");
   $("detailPanel").innerHTML = `
-    <button class="detail-back" id="detailBack">
-      <svg viewBox="0 0 24 24" class="ico"><path d="M15 18l-6-6 6-6"/></svg> Back</button>
+    <div class="detail-top">
+      <button class="detail-back" id="detailBack">
+        <svg viewBox="0 0 24 24" class="ico"><path d="M15 18l-6-6 6-6"/></svg> Back</button>
+      <button class="detail-fullscreen" id="detailFullscreen" title="Full screen"></button>
+    </div>
     <input class="detail-title" id="detailTitle" value="${esc(t.title)}">
     <div class="detail-sub">${esc(dateGroup(t.created))} · ${esc(fmtTime(t.created))} · ${fmtDur(t.duration_seconds)}</div>
     <div class="detail-tags" id="detailTags">${tags}
@@ -228,12 +243,14 @@ function renderDetail(res) {
     <div class="actionbar">
       <button data-act="copy">⧉ Copy all</button>
       <button data-act="export">⬇ Export .txt</button>
-      <button data-act="move">🗂 Move to folder</button>
+      <button data-act="move"><img class="folder-ico" src="folder-icon.png" alt=""> Move to folder</button>
       <button data-act="fav">${t.favourite ? "★ Favourited" : "☆ Favourite"}</button>
       <button data-act="del" class="danger">🗑 Remove</button>
     </div>
     <div class="chat">${bubbles || '<div class="empty">No speech in this transcript.</div>'}</div>`;
   $("detailBack").onclick = closeDetail;
+  $("detailFullscreen").onclick = () => setDetailFullscreen(!S.detailFullscreen);
+  setDetailFullscreen(!!S.detailFullscreen);
   const titleEl = $("detailTitle");
   titleEl.onchange = () => api().set_title(t.id, titleEl.value).then(refresh);
   $("tagAdd").onclick = () => {
@@ -364,13 +381,55 @@ function finishRecording(entry) {
 }
 
 /* ---------- search ---------- */
+function filtersActive() {
+  const f = S.filters;
+  return f.tags.length > 0 || !!f.folder || f.favourite || !!f.dateFrom || !!f.dateTo ||
+    !!f.durMin || !!f.durMax || f.sort !== "newest";
+}
+function filterPayload() {
+  const f = S.filters;
+  return {
+    tags: f.tags, folder: f.folder || null, favourite: f.favourite,
+    date_from: f.dateFrom || null, date_to: f.dateTo || null,
+    duration_min: f.durMin ? Number(f.durMin) : null,
+    duration_max: f.durMax ? Number(f.durMax) : null,
+    sort: f.sort,
+  };
+}
+function renderSearchFilters() {
+  const tagsEl = $("filterTags");
+  tagsEl.innerHTML = (S.library.tags || []).map(t =>
+    `<button class="filter-chip ${S.filters.tags.includes(t) ? "active" : ""}" data-tag="${esc(t)}">${esc(t)}</button>`
+  ).join("") || `<span class="muted" style="font-size:12px">No tags yet</span>`;
+  tagsEl.querySelectorAll("button[data-tag]").forEach(b => b.onclick = () => {
+    const tag = b.dataset.tag;
+    const i = S.filters.tags.indexOf(tag);
+    if (i === -1) S.filters.tags.push(tag); else S.filters.tags.splice(i, 1);
+    renderSearchFilters(); doSearch();
+  });
+  const folderEl = $("filterFolder");
+  folderEl.innerHTML = `<option value="">Any folder</option>` +
+    (S.library.folders || []).map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join("");
+  folderEl.value = S.filters.folder;
+  $("filterFav").checked = S.filters.favourite;
+  $("filterDateFrom").value = S.filters.dateFrom;
+  $("filterDateTo").value = S.filters.dateTo;
+  $("filterDurMin").value = S.filters.durMin;
+  $("filterDurMax").value = S.filters.durMax;
+  $("filterSort").value = S.filters.sort;
+}
+function resetFilters() {
+  S.filters = { tags: [], folder: "", favourite: false, dateFrom: "", dateTo: "", durMin: "", durMax: "", sort: "newest" };
+  renderSearchFilters();
+}
+
 let _searchT = null;
 function doSearch() {
   clearTimeout(_searchT);
   _searchT = setTimeout(() => {
     const q = $("searchInput").value.trim();
-    if (!q) { renderList(); return; }
-    api().search(q).then(items => renderCards(items));
+    if (!q && !filtersActive()) { renderList(); return; }
+    api().search(q, filterPayload()).then(items => renderCards(items));
   }, 140);
 }
 
@@ -384,16 +443,28 @@ function refresh() {
 
 /* ---------- UI bindings ---------- */
 function bindUI() {
+  initSidebarToggle();
+  initListToggle();
   $("startBtn").onclick = startRecording;
   $("stopBtn").onclick = stopRecording;
   $("recTitle").addEventListener("input", () => api().set_pending_title($("recTitle").value));
 
   $("searchToggle").onclick = () => {
     const sb = $("searchBar"); sb.classList.toggle("hidden");
-    if (!sb.classList.contains("hidden")) $("searchInput").focus();
+    if (!sb.classList.contains("hidden")) { renderSearchFilters(); $("searchInput").focus(); }
   };
-  $("searchClose").onclick = () => { $("searchBar").classList.add("hidden"); $("searchInput").value = ""; renderList(); };
+  $("searchClose").onclick = () => {
+    $("searchBar").classList.add("hidden"); $("searchInput").value = ""; resetFilters(); renderList();
+  };
   $("searchInput").addEventListener("input", doSearch);
+  $("filterFolder").addEventListener("change", e => { S.filters.folder = e.target.value; doSearch(); });
+  $("filterFav").addEventListener("change", e => { S.filters.favourite = e.target.checked; doSearch(); });
+  $("filterDateFrom").addEventListener("change", e => { S.filters.dateFrom = e.target.value; doSearch(); });
+  $("filterDateTo").addEventListener("change", e => { S.filters.dateTo = e.target.value; doSearch(); });
+  $("filterDurMin").addEventListener("input", e => { S.filters.durMin = e.target.value; doSearch(); });
+  $("filterDurMax").addEventListener("input", e => { S.filters.durMax = e.target.value; doSearch(); });
+  $("filterSort").addEventListener("change", e => { S.filters.sort = e.target.value; doSearch(); });
+  $("filterClear").onclick = () => { resetFilters(); doSearch(); };
 
   $("audioSettingsBtn").onclick = () => { $("audioModal").classList.remove("hidden"); loadDevices(); };
   $("audioClose").onclick = () => $("audioModal").classList.add("hidden");
@@ -437,10 +508,43 @@ function bindUI() {
     if (us !== "text") sel.removeAllRanges();           // clicked outside text -> unhighlight
   });
 
-  document.addEventListener("keydown", e => { if (e.key === "Escape") { closePop(); if (S.selectedId) closeDetail(); } });
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Escape") return;
+    closePop();
+    if (S.detailFullscreen) setDetailFullscreen(false);
+    else if (S.selectedId) closeDetail();
+  });
   document.addEventListener("click", e => {
     if (!e.target.closest("#folderPop") && !e.target.closest('[data-act="move"]')) closePop();
   });
+}
+/* ---------- sidebar collapse (Loop-style icon rail) ---------- */
+function initSidebarToggle() {
+  const toggle = $("sidebarToggle"); if (!toggle) return;
+  const sidebar = document.querySelector(".sidebar");
+  const setCollapsed = (collapsed) => {
+    sidebar.classList.toggle("collapsed", collapsed);
+    toggle.setAttribute("aria-expanded", String(!collapsed));
+    toggle.title = collapsed ? "Expand sidebar" : "Collapse sidebar";
+    try { localStorage.setItem("ds_sidebar_collapsed", collapsed ? "1" : "0"); } catch (e) {}
+  };
+  let startCollapsed = false;
+  try { startCollapsed = localStorage.getItem("ds_sidebar_collapsed") === "1"; } catch (e) {}
+  setCollapsed(startCollapsed);
+  toggle.onclick = () => setCollapsed(!sidebar.classList.contains("collapsed"));
+}
+function initListToggle() {
+  const toggle = $("listToggle"); if (!toggle) return;
+  const body = document.querySelector(".body");
+  const setCollapsed = (collapsed) => {
+    body.classList.toggle("list-collapsed", collapsed);
+    toggle.title = collapsed ? "Expand list" : "Collapse list";
+    try { localStorage.setItem("ds_list_collapsed", collapsed ? "1" : "0"); } catch (e) {}
+  };
+  let startCollapsed = false;
+  try { startCollapsed = localStorage.getItem("ds_list_collapsed") === "1"; } catch (e) {}
+  setCollapsed(startCollapsed);
+  toggle.onclick = () => setCollapsed(!body.classList.contains("list-collapsed"));
 }
 function setDevicePillsFromSel() {
   const d = S.devices; if (!d) return;

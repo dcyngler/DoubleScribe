@@ -26,6 +26,20 @@ import live_transcriber as live       # LiveChannel, SpeakerTracker, transcribe_
 SAMPLE_RATE = live.SAMPLE_RATE
 
 
+def _group_turns(session):
+    """Like transcriber.group_turns, but a 'Them' phrase flagged as a voice
+    change starts a new turn even though the label ('Them') didn't change --
+    so a different remote voice shows as a separate bubble, unnamed."""
+    turns = []
+    for label, text, voice_change in session:
+        if turns and turns[-1][0] == label and not (label == "Them" and voice_change):
+            turns[-1][1].append(text)
+        else:
+            turns.append([label, [text]])
+    return [(label, core.format_dictated_lists(" ".join(p.strip() for p in parts).strip()))
+            for label, parts in turns]
+
+
 class LiveEngine:
     """Reuses the existing live pipeline; reports phrases via callbacks."""
 

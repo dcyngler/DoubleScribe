@@ -7,6 +7,7 @@ import json
 import threading
 import urllib.request
 import webbrowser
+from datetime import datetime, timezone
 from pathlib import Path
 
 import webview
@@ -125,6 +126,13 @@ class Api:
         enabled = bool(enabled)
         self.settings.set("profanity_filter", enabled)
         self.engine.censor_profanity = enabled
+        return True
+
+    def acknowledge_consent(self):
+        """User clicked through the recording-consent gate; record it (with a timestamp,
+        so there's a trail showing the warning was shown and accepted, not just skipped)."""
+        self.settings.set("consent_acknowledged", True)
+        self.settings.set("consent_acknowledged_at", datetime.now(timezone.utc).isoformat())
         return True
 
     def get_paths(self):

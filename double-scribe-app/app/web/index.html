@@ -229,6 +229,33 @@
   </div>
 </div>
 
+<!-- Recording consent gate: shown once, before recording is available; not dismissible except by acknowledging -->
+<div class="modal-overlay hidden" id="consentModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Before you record</h2>
+    </div>
+    <p class="consent-text">
+      Double Scribe transcribes whatever your microphone and speakers pick up. It's
+      <strong>your</strong> responsibility, not the app's, to tell everyone else on the call
+      that you're transcribing, and to get their okay first &mdash; many places (including
+      several US states, the UK, the EU, and Canada) legally require it.
+    </p>
+    <p class="consent-text">
+      Double Scribe doesn't join the call or post a bot/banner the way cloud notetakers do,
+      so there's no automatic indicator for the other participants &mdash; saying it out loud,
+      every time, is the only way they'll know.
+    </p>
+    <label class="consent-check">
+      <input type="checkbox" id="consentCheckbox">
+      <span>I understand it's my responsibility to get consent from everyone on the call before I start recording.</span>
+    </label>
+    <div class="modal-foot">
+      <button class="btn-primary" id="consentContinue" disabled style="margin-left:auto">Continue</button>
+    </div>
+  </div>
+</div>
+
 <!-- Move-to-folder popover -->
 <div class="popover hidden" id="folderPop"></div>
 

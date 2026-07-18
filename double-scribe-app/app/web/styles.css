@@ -247,6 +247,12 @@ input,select{font-family:inherit;font-size:14px}
 .status-dot{width:10px;height:10px;border-radius:50%;background:var(--n400)}
 .status-dot.ok{background:var(--green)}
 
+/* ---------- Consent gate ---------- */
+.consent-text{font-size:13px;line-height:1.6;color:var(--n600);margin:0 0 16px}
+.consent-check{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--n900);
+  cursor:pointer;margin-bottom:18px}
+.consent-check input{margin-top:3px;flex:0 0 auto}
+
 /* ---------- App settings ---------- */
 #appSettingsModal .modal{width:480px}
 .settings-row{display:flex;align-items:center;justify-content:space-between;gap:16px;

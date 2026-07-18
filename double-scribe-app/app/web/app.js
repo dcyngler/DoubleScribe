@@ -8,6 +8,7 @@ const S = {
   detailFullscreen: false,
   ready: false,
   recording: false,
+  consentAcknowledged: false,
   devices: null,
   selOut: -1, selIn: -1,   // -1 = Auto (capture all devices)
   search: "",
@@ -88,6 +89,10 @@ function init() {
   api().get_library().then(lib => { S.library = lib; renderSidebar(); renderList(); });
   loadDevices();   // device pills/modal don't need the model — show them right away
   pollStatus();
+  api().get_settings().then(s => {
+    S.consentAcknowledged = !!s.consent_acknowledged;
+    if (!S.consentAcknowledged) $("consentModal").classList.remove("hidden");
+  });
   $("updateLink").addEventListener("click", (e) => {
     e.preventDefault();
     if (e.currentTarget._url) api().open_url(e.currentTarget._url);
@@ -332,6 +337,7 @@ function closePop() { $("folderPop").classList.add("hidden"); }
 /* ---------- recording ---------- */
 function startRecording() {
   if (!S.ready || S.recording) return;
+  if (!S.consentAcknowledged) { $("consentModal").classList.remove("hidden"); return; }
   const title = $("recTitle").value;
   api().start(S.selOut, S.selIn, title).then(r => {
     if (!r || !r.ok) { toast("Could not start: " + ((r && r.error) || "audio error")); return; }
@@ -462,6 +468,13 @@ function bindUI() {
   initListToggle();
   $("startBtn").onclick = startRecording;
   $("stopBtn").onclick = stopRecording;
+  $("consentCheckbox").onchange = e => { $("consentContinue").disabled = !e.target.checked; };
+  $("consentContinue").onclick = () => {
+    api().acknowledge_consent().then(() => {
+      S.consentAcknowledged = true;
+      $("consentModal").classList.add("hidden");
+    });
+  };
   $("recTitle").addEventListener("input", () => api().set_pending_title($("recTitle").value));
 
   $("searchToggle").onclick = () => {

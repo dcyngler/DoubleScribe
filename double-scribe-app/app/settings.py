@@ -14,6 +14,8 @@ SETTINGS_PATH = core.DATA_DIR / "settings.json"
 
 _DEFAULTS = {
     "profanity_filter": False,
+    "consent_acknowledged": False,
+    "consent_acknowledged_at": None,
 }
 
 

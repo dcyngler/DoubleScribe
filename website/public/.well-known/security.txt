@@ -1,0 +1,4 @@
+Contact: mailto:Davidcyngler@outlook.com
+Expires: 2027-07-18T00:00:00.000Z
+Canonical: https://doublescribe.app/.well-known/security.txt
+Preferred-Languages: en

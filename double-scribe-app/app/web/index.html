@@ -166,8 +166,8 @@
 <!-- Status bar -->
 <footer class="statusbar">
   <span class="statusbar-version" id="statusbarVersion">Double Scribe</span>
-  <a class="statusbar-update hidden" id="updateLink" href="#" title="Open release page">
-    <span data-i18n="link_update_available">Update available</span> &bull; <span id="updateVersion"></span>
+  <a class="statusbar-update hidden" id="updateLink" href="#" title="Download and install now">
+    <span id="updateLinkText" data-i18n="link_update_available">Update available</span> &bull; <span id="updateVersion"></span>
   </a>
 </footer>
 </div>
@@ -200,6 +200,14 @@
       <span class="settings-row-label" data-i18n="label_filter_profanity">Filter profanity</span>
       <label class="switch">
         <input type="checkbox" id="profanityToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="settings-row">
+      <span class="settings-row-label" data-i18n="label_auto_update_check">Automatically check for updates</span>
+      <label class="switch">
+        <input type="checkbox" id="autoUpdateToggle">
         <span class="slider"></span>
       </label>
     </div>

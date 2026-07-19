@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Double Scribe: get approval, then transcribe the meeting</title>
+<meta name="description" content="Get everyone's approval, then start Double Scribe. It sits on your own computer, transcribes the meeting live, and works quietly in the background. Free, private, and fully offline.">
+<link rel="icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-left">
+    <input type="checkbox" id="nav-toggle" class="nav-toggle-checkbox">
+    <label for="nav-toggle" class="nav-toggle" aria-label="Toggle menu" aria-controls="nav-links">
+      <span></span><span></span><span></span>
+    </label>
+    <a href="/" class="brand">
+      <img src="/img/icon.png" alt="" class="brand-mark">
+      <span>Double Scribe</span>
+    </a>
+  </div>
+  <nav class="nav-links" id="nav-links">
+    <a href="/">Home</a>
+    <a href="/about.html">About</a>
+    <a href="/info.html">How It Works</a>
+    <a href="/api/download" class="nav-download">Download</a>
+    <!-- TODO: point this at your GitHub repo URL -->
+    <a href="#" class="icon-link" aria-label="GitHub" title="GitHub (coming soon)">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+        <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+      </svg>
+    </a>
+  </nav>
+  <!-- TODO: paste your Stripe Payment Link URL here (Dashboard -> Payment links) -->
+  <a href="https://donate.stripe.com/test_eVqeVc4e0cIT9FsfvG4AU00" class="btn btn-donate btn-sm">Donate</a>
+</header>
+
+<main>
+
+  <section class="hero">
+    <h1>A fully-offline desktop based transcription app for virtual meetings on Windows.</h1>
+    <p class="lede">Doesn't matter if the transcribe button belongs to the host, or the other
+      side's on a completely different platform. Once everyone's agreed you can record,
+      that's your cue to start Double Scribe, not before.</p>
+    <ul class="check-list hero-list">
+      <li>It sits on your own computers desktop</li>
+      <li>It transcribes live, while the call is happening (it auto detects the microphone input and speaker output)</li>
+      <li>It works in the background and you can end the transcription at any time</li>
+    </ul>
+    <div class="hero-ctas">
+      <a href="/api/download" class="btn btn-primary btn-lg">Download for Windows</a>
+      <a href="/info.html" class="btn btn-ghost btn-lg">See how it works</a>
+    </div>
+    <p class="hero-note">Free · Open source · No account · No cloud · Get consent first</p>
+
+    <div class="demo" aria-hidden="true">
+      <div class="demo-bar">
+        <span class="demo-dot"></span>
+        <span class="demo-dot"></span>
+        <span class="demo-dot"></span>
+        <span class="demo-status"><span class="rec-dot"></span> Recording</span>
+      </div>
+      <div class="demo-body">
+        <div class="bubble them">
+          <span class="bubble-label">Them</span>
+          Can you send the updated deck before the call tomorrow?
+        </div>
+        <div class="bubble me">
+          <span class="bubble-label">Me</span>
+          Yep, I'll have it over tonight, along with the notes from today.
+        </div>
+        <div class="bubble them">
+          <span class="bubble-label">Them</span>
+          Perfect, that works. Thanks for jumping on this so quickly.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <div class="feature">
+      <h3>Free</h3>
+      <p>Transcription shouldn't be a paywall. Double Scribe is free to download and free to use, with no subscription and no limits.</p>
+    </div>
+    <div class="feature">
+      <h3>Private</h3>
+      <p>Everything runs locally with Whisper, on your own CPU or GPU. Audio is held in memory only while you're recording, then discarded. Nothing is uploaded, nothing is recorded to disk.</p>
+    </div>
+    <div class="feature">
+      <h3>Live</h3>
+      <p>Watch the transcript appear while you're still talking, not after you hang up. Your mic and your speakers are automatically labelled <strong>Me</strong> and <strong>Them</strong>.</p>
+    </div>
+    <div class="feature">
+      <h3>Simple</h3>
+      <p>One toggle. Click start, talk, click stop. No setup, no configuration, no account to create.</p>
+    </div>
+  </section>
+
+  <p class="consent-note"><a href="/info.html#info-consent">Recording consent</a> &mdash; know what applies to your call before you hit start.</p>
+
+  <section class="donate-note" id="donate-note">
+    <p>💙 Double Scribe will always be free. If it's useful to you, <a href="https://donate.stripe.com/test_eVqeVc4e0cIT9FsfvG4AU00">a small donation</a> helps keep it that way.</p>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <span>A fully-offline desktop based transcription app for virtual meetings on Windows.</span>
+  <span class="footer-credit">Developed by <a href="https://www.linkedin.com/in/david-cyngler/" target="_blank" rel="noopener">David Cyngler</a></span>
+  <span class="footer-contact">Got a product suggestion? Reach out directly: <a href="mailto:hello.double.scribe@gmail.com">hello.double.scribe@gmail.com</a></span>
+</footer>
+
+</body>
+</html>

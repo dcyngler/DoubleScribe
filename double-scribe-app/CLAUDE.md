@@ -105,9 +105,24 @@ Windows console is cp1252 — emoji/✓ crash `print`).
 
 ## Cutting a release
 The repo is public and the app checks `https://api.github.com/repos/dcyngler/DoubleScribe/releases/latest`
-on every launch (`app/api.py` `_check_for_update`) to show an "Update available" link in the
-status bar — it's a manual click-through to the release page, not a silent auto-updater. There's
-also an in-app "What's new" modal, driven by `app/release_notes.py`, shown once per version bump.
+on every launch (`app/api.py` `_check_for_update`, gated by the `update_checks_enabled` setting —
+a toggle in App settings, default on) to show an "Update available" link in the status bar.
+Clicking it is a **silent self-update**, Handy-style: `install_update()` downloads the first
+`.exe` asset on the release to `%TEMP%`, reports progress via `onUpdateProgress`, then launches
+it with `/VERYSILENT /SUPPRESSMSGBOXES /NORESTART` and quits (`_window.destroy()` + `os._exit`).
+Because the install is per-user (`PrivilegesRequired=lowest`), there's no UAC prompt. Inno's
+`CloseApplications`/`RestartApplications` (`DoubleScribe.iss`) handle the running exe/DLL locks,
+and a `skipifnotsilent` `[Run]` entry relaunches the app once the silent install finishes — so
+the user ends up back in the app on the new version with no dialogs at all. If a release has no
+`.exe` asset yet (upload still in progress), it falls back to opening the release page instead.
+There's also an in-app "What's new" modal, driven by `app/release_notes.py`, shown once per
+version bump — separate from the update check, just local content bundled at build time.
+
+**Caveat vs. Handy:** Handy's Tauri updater verifies a minisign signature on the downloaded
+artifact before installing. This flow has no equivalent signature check — it trusts the HTTPS
+connection to GitHub's release asset host, same trust boundary as the old manual-download link.
+Worth adding (e.g. a published SHA-256 checksum, or real code signing) before relying on this
+for anything more sensitive than what's already true today.
 
 Checklist, in order:
 1. Bump the version in **two places** (they must match — nothing enforces this automatically):
@@ -117,8 +132,11 @@ Checklist, in order:
 3. Build: `.venv\Scripts\pyinstaller.exe DoubleScribe.spec --noconfirm`, then
    `"%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" DoubleScribe.iss` → `installer\DoubleScribeSetup.exe`.
 4. `git tag vX.Y.Z && git push origin vX.Y.Z`.
-5. `gh release create vX.Y.Z installer\DoubleScribeSetup.exe --title "vX.Y.Z" --notes-file <changelog section for this version>`.
+5. `gh release create vX.Y.Z installer\DoubleScribeSetup.exe --title "vX.Y.Z" --notes-file <changelog section for this version>`
+   — the `.exe` **must** be attached to the release for the in-app updater to find it (that's
+   what this command does); a tag/release with no asset just makes clients fall back to the
+   release-page link.
 
 The update check and "What's new" modal both read `APP_VERSION`/`NOTES` bundled at build time —
 there's no way for an already-installed copy to see release notes for a version newer than the
-one it's running, by design (it'll just see the "Update available" link until it's reinstalled).
+one it's running, by design (it'll just self-update to that version and see the modal next launch).

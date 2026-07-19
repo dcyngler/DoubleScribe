@@ -19,6 +19,7 @@ _DEFAULTS = {
     "language": "en",
     "onboarded": False,
     "last_seen_version": None,
+    "update_checks_enabled": True,
 }
 
 

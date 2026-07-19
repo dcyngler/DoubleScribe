@@ -157,7 +157,20 @@ function init() {
   });
   $("updateLink").addEventListener("click", (e) => {
     e.preventDefault();
-    if (e.currentTarget._url) api().open_url(e.currentTarget._url);
+    const link = e.currentTarget;
+    if (link._installing) return;
+    if (link._failed && link._url) { api().open_url(link._url); return; }
+    link._installing = true;
+    api().install_update().then(started => {
+      if (started) {
+        $("updateVersion").classList.add("hidden");
+        $("updateLinkText").textContent = t("link_update_downloading", { pct: "0" });
+      } else {
+        // No installer asset attached to the release -- Python already opened the
+        // release page in the browser, so just leave the link as-is for a retry.
+        link._installing = false;
+      }
+    });
   });
   api().get_version().then(v => { $("statusbarVersion").textContent = `Double Scribe v${v}`; });
 }
@@ -197,16 +210,35 @@ window.onPhrase = (label, text, voiceChange) => appendLive(label, text, voiceCha
 window.onSaved = (entry) => finishRecording(entry);
 window.onUpdateAvailable = (info) => {
   const link = $("updateLink");
+  $("updateLinkText").textContent = t("link_update_available");
   $("updateVersion").textContent = `v${info.version}`;
+  $("updateVersion").classList.remove("hidden");
   link._url = info.url;
+  link._installing = false;
+  link._failed = false;
   link.classList.remove("hidden");
+};
+window.onUpdateProgress = (info) => {
+  const link = $("updateLink");
+  $("updateLinkText").textContent = info.installing
+    ? t("link_update_installing")
+    : t("link_update_downloading", { pct: String(info.percent) });
+};
+window.onUpdateError = () => {
+  const link = $("updateLink");
+  link._installing = false;
+  link._failed = true;
+  $("updateLinkText").textContent = t("link_update_failed");
 };
 
 /* ---------- devices ---------- */
 function loadDevices() { api().get_devices().then(setDevices); }
 function loadAppSettings() {
   api().get_version().then(v => { $("settingsVersion").textContent = `v${v}`; });
-  api().get_settings().then(s => { $("profanityToggle").checked = !!s.profanity_filter; });
+  api().get_settings().then(s => {
+    $("profanityToggle").checked = !!s.profanity_filter;
+    $("autoUpdateToggle").checked = s.update_checks_enabled !== false;
+  });
 }
 function setDevices(dev) {
   if (!dev) return;
@@ -596,6 +628,7 @@ function bindUI() {
     api().set_profanity_filter(e.target.checked)
       .then(() => toast(e.target.checked ? t("toast_profanity_on") : t("toast_profanity_off")));
   };
+  $("autoUpdateToggle").onchange = e => api().set_update_checks_enabled(e.target.checked);
   $("settingsLanguage").onchange = e => setLanguage(e.target.value);
   $("settingsTheme").onchange = e => applyTheme(e.target.value);
   $("githubBtn").onclick = () => api().get_paths().then(p => api().open_url(p.source_url));

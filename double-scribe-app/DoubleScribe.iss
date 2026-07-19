@@ -36,6 +36,12 @@ SolidCompression=yes
 WizardStyle=modern
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
+; Needed for the in-app silent auto-updater (api.py install_update): when the running
+; app's own exe/DLLs are locked, Setup closes it via Restart Manager and relaunches it
+; after copying files -- these are Inno's defaults, spelled out here since the app now
+; depends on this behaviour rather than just benefiting from it.
+CloseApplications=yes
+RestartApplications=yes
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -54,3 +60,7 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+; Silent/very-silent installs (the in-app auto-updater) skip the checkbox above entirely,
+; so relaunch unconditionally here -- this is what makes the update feel like Handy's:
+; download, install, and come back up on the new version with no prompts.
+Filename: "{app}\{#MyAppExeName}"; Flags: nowait skipifnotsilent

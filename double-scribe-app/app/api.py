@@ -4,6 +4,9 @@ events back into the page. Owns a Store (metadata) and a LiveEngine (capture).
 """
 
 import json
+import os
+import subprocess
+import tempfile
 import threading
 import urllib.request
 import webbrowser
@@ -43,6 +46,7 @@ class Api:
         self.engine.censor_profanity = self.settings.get("profanity_filter")
         self._window = None
         self._ready = False
+        self._pending_update = None
         self._status = "Starting up..."
         self._pending_title = ""
 
@@ -92,7 +96,11 @@ class Api:
         self._emit("onSaved", entry)
 
     def _check_for_update(self):
-        """Best-effort GitHub Releases check; silent no-op when offline or no releases exist yet."""
+        """Best-effort GitHub Releases check; silent no-op when offline, disabled, or no
+        releases exist yet. Like Handy, this only *checks* -- installing is a separate,
+        user-triggered step (see install_update())."""
+        if not self.settings.get("update_checks_enabled"):
+            return
         try:
             req = urllib.request.Request(
                 f"https://api.github.com/repos/{UPDATE_REPO}/releases/latest",
@@ -102,9 +110,66 @@ class Api:
                 data = json.loads(resp.read().decode("utf-8"))
             latest = (data.get("tag_name") or "").lstrip("vV")
             if latest and _version_tuple(latest) > _version_tuple(APP_VERSION):
-                self._emit("onUpdateAvailable", {"version": latest, "url": data.get("html_url", "")})
+                asset_url = None
+                for asset in data.get("assets", []):
+                    if asset.get("name", "").lower().endswith(".exe"):
+                        asset_url = asset.get("browser_download_url")
+                        break
+                self._pending_update = {
+                    "version": latest,
+                    "url": data.get("html_url", ""),
+                    "asset_url": asset_url,
+                }
+                self._emit("onUpdateAvailable", self._pending_update)
         except Exception:
             pass
+
+    def install_update(self):
+        """Downloads the installer for the update found by _check_for_update and runs it
+        silently, replacing the running app; the installer relaunches it when done (see
+        the [Run] skipifnotsilent entry in DoubleScribe.iss). Falls back to opening the
+        release page if there's no attached installer asset to download (e.g. a release
+        published before its upload finished)."""
+        info = self._pending_update
+        if not info:
+            return False
+        if not info.get("asset_url"):
+            self.open_url(info["url"])
+            return False
+        threading.Thread(target=self._do_install_update, args=(info,), daemon=True).start()
+        return True
+
+    def _do_install_update(self, info):
+        try:
+            installer_path = os.path.join(
+                tempfile.gettempdir(), f"DoubleScribeSetup-{info['version']}.exe"
+            )
+            req = urllib.request.Request(info["asset_url"], headers={"User-Agent": "DoubleScribe"})
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                total = int(resp.headers.get("Content-Length", 0))
+                downloaded = 0
+                with open(installer_path, "wb") as f:
+                    while True:
+                        chunk = resp.read(262144)
+                        if not chunk:
+                            break
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        pct = int(downloaded * 100 / total) if total else 0
+                        self._emit("onUpdateProgress", {"percent": pct})
+            self._emit("onUpdateProgress", {"percent": 100, "installing": True})
+            # Per-user install (PrivilegesRequired=lowest) -- no UAC prompt needed.
+            # Inno's CloseApplications/RestartApplications handle any file locks the
+            # installer hits; we also proactively quit so the exe/DLLs release fast.
+            subprocess.Popen(
+                [installer_path, "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART"],
+                creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
+            )
+            if self._window:
+                self._window.destroy()
+            os._exit(0)
+        except Exception as exc:
+            self._emit("onUpdateError", str(exc))
 
     # -- queries (JS -> Python) --------------------------------------------
     def get_status(self):
@@ -127,6 +192,10 @@ class Api:
         enabled = bool(enabled)
         self.settings.set("profanity_filter", enabled)
         self.engine.censor_profanity = enabled
+        return True
+
+    def set_update_checks_enabled(self, enabled):
+        self.settings.set("update_checks_enabled", bool(enabled))
         return True
 
     def set_language(self, code):

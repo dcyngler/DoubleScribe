@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Download stats</title>
+<style>
+  :root{--brand-700:#0033CC;--n900:#1A1A1A;--n600:#585858;--n200:#E5E5E5;--n100:#F5F5F5;--n0:#FFFFFF;--border:rgba(0,0,0,.09)}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--n900);background:var(--n0);padding:32px 24px 64px}
+  main{max-width:760px;margin:0 auto}
+  h1{font-size:22px;margin:0 0 20px}
+  h2{font-size:15px;margin:36px 0 10px;color:var(--n600)}
+  .gate{display:flex;gap:8px;margin-bottom:24px}
+  input{flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px}
+  button{padding:9px 16px;border:none;border-radius:8px;background:var(--brand-700);color:#fff;font-weight:600;font-size:14px;cursor:pointer}
+  button:hover{opacity:.9}
+  .total{font-size:36px;font-weight:700;color:var(--brand-700)}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border)}
+  th{color:var(--n600);font-weight:600}
+  #error{color:#B3261E;font-size:14px;margin-top:12px}
+  #results{display:none}
+</style>
+</head>
+<body>
+<main>
+  <h1>Double Scribe -- download stats</h1>
+  <div class="gate">
+    <input id="token" type="password" placeholder="Stats token">
+    <button id="load">Load</button>
+  </div>
+  <div id="error"></div>
+
+  <div id="results">
+    <div class="total" id="total">--</div>
+    <div style="color:var(--n600);font-size:13px">downloads, last 90 days</div>
+
+    <h2>By day</h2>
+    <table><thead><tr><th>Day</th><th>Downloads</th></tr></thead><tbody id="by-day"></tbody></table>
+
+    <h2>By country</h2>
+    <table><thead><tr><th>Country</th><th>Downloads</th></tr></thead><tbody id="by-country"></tbody></table>
+
+    <h2>By referrer</h2>
+    <table><thead><tr><th>Referrer</th><th>Downloads</th></tr></thead><tbody id="by-referrer"></tbody></table>
+  </div>
+</main>
+
+<script>
+const tokenInput = document.getElementById("token");
+const errorEl = document.getElementById("error");
+const resultsEl = document.getElementById("results");
+
+const saved = sessionStorage.getItem("statsToken");
+if (saved) tokenInput.value = saved;
+
+document.getElementById("load").addEventListener("click", load);
+tokenInput.addEventListener("keydown", (e) => { if (e.key === "Enter") load(); });
+if (saved) load();
+
+async function load() {
+  const token = tokenInput.value.trim();
+  errorEl.textContent = "";
+  if (!token) return;
+
+  let res;
+  try {
+    res = await fetch("/api/stats?token=" + encodeURIComponent(token));
+  } catch (err) {
+    errorEl.textContent = "Request failed: " + err.message;
+    return;
+  }
+
+  if (!res.ok) {
+    resultsEl.style.display = "none";
+    errorEl.textContent = res.status === 401 ? "Wrong token." : "Error " + res.status + ": " + (await res.text());
+    return;
+  }
+
+  sessionStorage.setItem("statsToken", token);
+  const data = await res.json();
+  render(data.data || []);
+}
+
+function render(rows) {
+  const byDay = new Map();
+  const byCountry = new Map();
+  const byReferrer = new Map();
+  let total = 0;
+
+  for (const row of rows) {
+    const n = Number(row.downloads) || 0;
+    total += n;
+    byDay.set(row.day, (byDay.get(row.day) || 0) + n);
+    byCountry.set(row.country, (byCountry.get(row.country) || 0) + n);
+    byReferrer.set(row.referer, (byReferrer.get(row.referer) || 0) + n);
+  }
+
+  document.getElementById("total").textContent = total;
+  fillTable("by-day", [...byDay.entries()].sort((a, b) => b[0].localeCompare(a[0])));
+  fillTable("by-country", [...byCountry.entries()].sort((a, b) => b[1] - a[1]));
+  fillTable("by-referrer", [...byReferrer.entries()].sort((a, b) => b[1] - a[1]));
+  resultsEl.style.display = "block";
+}
+
+function fillTable(id, entries) {
+  const tbody = document.getElementById(id);
+  tbody.innerHTML = "";
+  for (const [label, count] of entries) {
+    const tr = document.createElement("tr");
+    const tdLabel = document.createElement("td");
+    tdLabel.textContent = label || "(unknown)";
+    const tdCount = document.createElement("td");
+    tdCount.textContent = count;
+    tr.append(tdLabel, tdCount);
+    tbody.append(tr);
+  }
+}
+</script>
+</body>
+</html>

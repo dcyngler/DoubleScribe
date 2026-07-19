@@ -36,26 +36,26 @@
     <nav class="nav" id="nav">
       <button class="nav-item active" data-view="all">
         <svg viewBox="0 0 24 24" class="ico"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-        <span>All transcripts</span>
+        <span data-i18n="nav_all">All transcripts</span>
       </button>
       <button class="nav-item" data-view="favourites">
         <svg viewBox="0 0 24 24" class="ico"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
-        <span>Favourites</span>
+        <span data-i18n="nav_favourites">Favourites</span>
       </button>
-      <div class="nav-section-label">Tags</div>
+      <div class="nav-section-label" data-i18n="nav_tags_label">Tags</div>
       <div id="tagNav" class="nav-sub"></div>
-      <div class="nav-section-label">Folders</div>
+      <div class="nav-section-label" data-i18n="nav_folders_label">Folders</div>
       <div id="folderNav" class="nav-sub"></div>
     </nav>
 
     <div class="sidebar-foot">
       <button class="settings-btn" id="appSettingsBtn">
         <svg viewBox="0 0 24 24" class="ico"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h5"/></svg>
-        <span>App settings</span>
+        <span data-i18n="btn_app_settings">App settings</span>
       </button>
       <button class="settings-btn" id="audioSettingsBtn">
         <svg viewBox="0 0 24 24" class="ico"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 0 0-1.7-1L14.5 3h-5l-.3 2.5a7 7 0 0 0-1.7 1l-2.4-1-2 3.5 2 1.5a7 7 0 0 0 0 2l-2 1.5 2 3.5 2.4-1a7 7 0 0 0 1.7 1L9.5 21h5l.3-2.5a7 7 0 0 0 1.7-1l2.4 1 2-3.5-2-1.5a7 7 0 0 0 .1-1z"/></svg>
-        <span>Audio settings</span>
+        <span data-i18n="btn_audio_settings">Audio settings</span>
       </button>
       <div class="device-pills" id="devicePills"></div>
     </div>
@@ -65,13 +65,13 @@
   <main class="main">
     <!-- Idle top bar -->
     <header class="topbar" id="topbarIdle">
-      <h1 class="page-title" id="pageTitle">All transcripts</h1>
+      <h1 class="page-title" id="pageTitle" data-i18n="nav_all">All transcripts</h1>
       <div class="topbar-actions">
-        <button class="btn-icon" id="searchToggle" title="Search">
+        <button class="btn-icon" id="searchToggle" title="Search" data-i18n-title="title_search">
           <svg viewBox="0 0 24 24" class="ico"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
         </button>
         <button class="btn-primary" id="startBtn" disabled>
-          <span class="dot-red"></span> Start listening
+          <span class="dot-red"></span> <span data-i18n="btn_start_listening">Start listening</span>
         </button>
       </div>
     </header>
@@ -82,51 +82,51 @@
         <span class="dot-red pulse"></span>
         <span class="rec-timer" id="recTimer">00:00</span>
       </div>
-      <input class="rec-title" id="recTitle" placeholder="Name this recording..." autocomplete="off">
-      <button class="btn-stop" id="stopBtn">Stop listening</button>
+      <input class="rec-title" id="recTitle" placeholder="Name this recording..." data-i18n-placeholder="placeholder_rec_title" autocomplete="off">
+      <button class="btn-stop" id="stopBtn" data-i18n="btn_stop_listening">Stop listening</button>
     </header>
 
     <!-- Search bar -->
     <div class="searchbar hidden" id="searchBar">
       <div class="searchbar-row">
         <svg viewBox="0 0 24 24" class="ico"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-        <input id="searchInput" placeholder="Search transcripts...">
+        <input id="searchInput" placeholder="Search transcripts..." data-i18n-placeholder="placeholder_search">
         <button class="btn-icon" id="searchClose">&times;</button>
       </div>
       <div class="search-filters" id="searchFilters">
         <div class="filter-group">
-          <span class="filter-label">Tags</span>
+          <span class="filter-label" data-i18n="filter_tags">Tags</span>
           <div class="filter-chips" id="filterTags"></div>
         </div>
         <div class="filter-group">
-          <span class="filter-label">Folder</span>
-          <select id="filterFolder"><option value="">Any folder</option></select>
+          <span class="filter-label" data-i18n="filter_folder">Folder</span>
+          <select id="filterFolder"><option value="" data-i18n="option_any_folder">Any folder</option></select>
         </div>
         <div class="filter-group filter-inline">
-          <label class="filter-check"><input type="checkbox" id="filterFav"> Favourites only</label>
+          <label class="filter-check"><input type="checkbox" id="filterFav"> <span data-i18n="label_favourites_only">Favourites only</span></label>
         </div>
         <div class="filter-group">
-          <span class="filter-label">Date</span>
+          <span class="filter-label" data-i18n="filter_date">Date</span>
           <div class="filter-range">
-            <input type="date" id="filterDateFrom"><span>to</span><input type="date" id="filterDateTo">
+            <input type="date" id="filterDateFrom"><span data-i18n="text_to">to</span><input type="date" id="filterDateTo">
           </div>
         </div>
         <div class="filter-group">
-          <span class="filter-label">Duration (min)</span>
+          <span class="filter-label" data-i18n="filter_duration">Duration (min)</span>
           <div class="filter-range">
-            <input type="number" id="filterDurMin" min="0" placeholder="Min"><span>to</span><input type="number" id="filterDurMax" min="0" placeholder="Max">
+            <input type="number" id="filterDurMin" min="0" placeholder="Min" data-i18n-placeholder="placeholder_min"><span data-i18n="text_to">to</span><input type="number" id="filterDurMax" min="0" placeholder="Max" data-i18n-placeholder="placeholder_max">
           </div>
         </div>
         <div class="filter-group">
-          <span class="filter-label">Sort</span>
+          <span class="filter-label" data-i18n="filter_sort">Sort</span>
           <select id="filterSort">
-            <option value="newest">Newest first</option>
-            <option value="oldest">Oldest first</option>
-            <option value="longest">Longest first</option>
-            <option value="shortest">Shortest first</option>
+            <option value="newest" data-i18n="sort_newest">Newest first</option>
+            <option value="oldest" data-i18n="sort_oldest">Oldest first</option>
+            <option value="longest" data-i18n="sort_longest">Longest first</option>
+            <option value="shortest" data-i18n="sort_shortest">Shortest first</option>
           </select>
         </div>
-        <button class="filter-clear" id="filterClear">Clear filters</button>
+        <button class="filter-clear" id="filterClear" data-i18n="btn_clear_filters">Clear filters</button>
       </div>
     </div>
 
@@ -157,7 +157,7 @@
 <footer class="statusbar">
   <span class="statusbar-version" id="statusbarVersion">Double Scribe</span>
   <a class="statusbar-update hidden" id="updateLink" href="#" title="Open release page">
-    Update available &bull; <span id="updateVersion"></span>
+    <span data-i18n="link_update_available">Update available</span> &bull; <span id="updateVersion"></span>
   </a>
 </footer>
 </div>
@@ -166,21 +166,19 @@
 <div class="modal-overlay hidden" id="appSettingsModal">
   <div class="modal">
     <div class="modal-head">
-      <h2>App settings</h2>
+      <h2 data-i18n="modal_app_settings_title">App settings</h2>
       <button class="btn-icon" id="appSettingsClose">&times;</button>
     </div>
 
     <div class="settings-row">
-      <span class="settings-row-label">Application language
-        <svg viewBox="0 0 24 24" class="settings-info" title="Only English is available at the moment."><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="7.5" r="0.6" fill="currentColor" stroke="none"/></svg>
+      <span class="settings-row-label"><span data-i18n="label_app_language">Application language</span>
+        <svg viewBox="0 0 24 24" class="settings-info" id="languageInfoIco" title="Changes the app's interface language." data-i18n-title="tooltip_language_info"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="7.5" r="0.6" fill="currentColor" stroke="none"/></svg>
       </span>
-      <select class="settings-select" id="settingsLanguage" disabled>
-        <option>English (US)</option>
-      </select>
+      <select class="settings-select" id="settingsLanguage"></select>
     </div>
 
     <div class="settings-row">
-      <span class="settings-row-label">Filter profanity</span>
+      <span class="settings-row-label" data-i18n="label_filter_profanity">Filter profanity</span>
       <label class="switch">
         <input type="checkbox" id="profanityToggle">
         <span class="slider"></span>
@@ -188,20 +186,20 @@
     </div>
 
     <div class="settings-row">
-      <span class="settings-row-label">Version</span>
+      <span class="settings-row-label" data-i18n="label_version">Version</span>
       <span class="settings-value" id="settingsVersion">—</span>
     </div>
 
     <div class="settings-row">
-      <span class="settings-row-label">Support development
-        <svg viewBox="0 0 24 24" class="settings-info" title="Donation link coming soon."><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="7.5" r="0.6" fill="currentColor" stroke="none"/></svg>
+      <span class="settings-row-label"><span data-i18n="label_support_dev">Support development</span>
+        <svg viewBox="0 0 24 24" class="settings-info" title="Donation link coming soon." data-i18n-title="tooltip_donation"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="7.5" r="0.6" fill="currentColor" stroke="none"/></svg>
       </span>
-      <button class="btn-secondary btn-donate" id="donateBtn" disabled title="Coming soon">Donate</button>
+      <button class="btn-secondary btn-donate" id="donateBtn" disabled title="Coming soon" data-i18n="btn_donate">Donate</button>
     </div>
 
     <div class="settings-row">
-      <span class="settings-row-label">Source code</span>
-      <button class="btn-secondary" id="githubBtn">View on GitHub</button>
+      <span class="settings-row-label" data-i18n="label_source_code">Source code</span>
+      <button class="btn-secondary" id="githubBtn" data-i18n="btn_view_github">View on GitHub</button>
     </div>
   </div>
 </div>
@@ -210,21 +208,21 @@
 <div class="modal-overlay hidden" id="audioModal">
   <div class="modal">
     <div class="modal-head">
-      <h2>Audio settings</h2>
+      <h2 data-i18n="modal_audio_settings_title">Audio settings</h2>
       <button class="btn-icon" id="audioClose">&times;</button>
     </div>
     <label class="field">
-      <span>System audio output <em>(the call / people you hear)</em></span>
+      <span><span data-i18n="label_system_audio">System audio output</span> <em data-i18n="note_system_audio">(the call / people you hear)</em></span>
       <select id="outSelect"></select>
     </label>
     <label class="field">
-      <span>Microphone input <em>(you)</em></span>
+      <span><span data-i18n="label_mic_input">Microphone input</span> <em data-i18n="note_mic_input">(you)</em></span>
       <select id="inSelect"></select>
     </label>
     <div class="modal-foot">
       <span class="status-dot" id="devStatus"></span>
-      <span id="devStatusText" class="muted">Checking devices...</span>
-      <button class="btn-secondary" id="refreshDevices">Refresh</button>
+      <span id="devStatusText" class="muted" data-i18n="status_checking_devices">Checking devices...</span>
+      <button class="btn-secondary" id="refreshDevices" data-i18n="btn_refresh">Refresh</button>
     </div>
   </div>
 </div>
@@ -233,9 +231,9 @@
 <div class="modal-overlay hidden" id="consentModal">
   <div class="modal">
     <div class="modal-head">
-      <h2>Before you record</h2>
+      <h2 data-i18n="modal_consent_title">Before you record</h2>
     </div>
-    <p class="consent-text">
+    <p class="consent-text" id="consentP1">
       Double Scribe transcribes whatever your microphone and speakers pick up. It's
       <strong>your</strong> responsibility, not the app's, to tell everyone else on the call
       that you're transcribing, and to get their okay first &mdash; many places (including
@@ -243,17 +241,51 @@
       other countries may too, so check the rules where you and the other participants
       are located.
     </p>
-    <p class="consent-text">
+    <p class="consent-text" id="consentP2">
       Double Scribe doesn't join the call or post a bot/banner the way cloud notetakers do,
       so there's no automatic indicator for the other participants &mdash; saying it out loud,
       every time, is the only way they'll know.
     </p>
     <label class="consent-check">
       <input type="checkbox" id="consentCheckbox">
-      <span>I understand it's my responsibility to get consent from everyone on the call before I start recording.</span>
+      <span data-i18n="consent_checkbox">I understand it's my responsibility to get consent from everyone on the call before I start recording.</span>
     </label>
     <div class="modal-foot">
-      <button class="btn-primary" id="consentContinue" disabled style="margin-left:auto">Continue</button>
+      <button class="btn-primary" id="consentContinue" disabled style="margin-left:auto" data-i18n="btn_continue">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- First-run welcome: shown once, before the consent gate -->
+<div class="modal-overlay hidden" id="onboardModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 data-i18n="modal_onboard_title">Welcome to Double Scribe</h2>
+    </div>
+    <p class="consent-text" id="onboardP1">
+      Double Scribe transcribes your calls entirely on this computer &mdash; audio and
+      transcripts never leave your machine.
+    </p>
+    <p class="consent-text" id="onboardP2">
+      While you're listening, your side of the conversation appears as
+      <strong>Me</strong>, and everyone else appears as <strong>Them</strong>, right as
+      it's said.
+    </p>
+    <div class="modal-foot">
+      <button class="btn-primary" id="onboardContinue" style="margin-left:auto" data-i18n="btn_get_started">Get started</button>
+    </div>
+  </div>
+</div>
+
+<!-- What's new: shown once after an update, when this version has authored notes -->
+<div class="modal-overlay hidden" id="releaseNotesModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="releaseNotesTitle" data-i18n="modal_whatsnew_title">What's new</h2>
+    </div>
+    <ul class="modal-list" id="releaseNotesList"></ul>
+    <div class="modal-foot">
+      <button class="btn-primary" id="releaseNotesContinue" style="margin-left:auto" data-i18n="btn_got_it">Got it</button>
     </div>
   </div>
 </div>
@@ -264,6 +296,7 @@
 <!-- Toast -->
 <div id="toast" class="toast hidden"></div>
 
+<script src="i18n.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

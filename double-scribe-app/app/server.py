@@ -34,7 +34,8 @@ ALLOWED_METHODS = {
     "start", "set_pending_title", "stop", "set_title", "add_tag", "remove_tag",
     "create_folder", "set_folder", "toggle_favourite", "remove_from_library",
     "export_txt", "get_version", "open_url",
-    "get_settings", "set_profanity_filter", "get_paths", "acknowledge_consent",
+    "get_settings", "set_profanity_filter", "set_language", "get_paths", "acknowledge_consent",
+    "acknowledge_onboarding", "check_whats_new", "acknowledge_release_notes",
 }
 
 BRIDGE_TAG = '<script src="bridge.js"></script>\n<script src="app.js"></script>'
@@ -180,6 +181,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
             self.end_headers()
             self.wfile.write(body)
             return
@@ -187,6 +189,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", CONTENT_TYPES.get(fpath.suffix, "application/octet-stream"))
         self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(data)
 

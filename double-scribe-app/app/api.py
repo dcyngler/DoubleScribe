@@ -15,9 +15,10 @@ import webview
 from engine import LiveEngine
 from store import Store, TRANSCRIPT_DIR
 from settings import Settings
+from release_notes import NOTES as RELEASE_NOTES
 
-APP_VERSION = "4.1.1"
-UPDATE_REPO = "dcyngler/livetranscription"   # GitHub repo checked for newer releases
+APP_VERSION = "1.0.0"
+UPDATE_REPO = "dcyngler/DoubleScribe"   # GitHub repo checked for newer releases
 SOURCE_URL = f"https://github.com/{UPDATE_REPO}"
 
 
@@ -128,11 +129,43 @@ class Api:
         self.engine.censor_profanity = enabled
         return True
 
+    def set_language(self, code):
+        self.settings.set("language", code or "en")
+        return True
+
     def acknowledge_consent(self):
         """User clicked through the recording-consent gate; record it (with a timestamp,
         so there's a trail showing the warning was shown and accepted, not just skipped)."""
         self.settings.set("consent_acknowledged", True)
         self.settings.set("consent_acknowledged_at", datetime.now(timezone.utc).isoformat())
+        return True
+
+    def acknowledge_onboarding(self):
+        self.settings.set("onboarded", True)
+        return True
+
+    def check_whats_new(self):
+        """Local-only comparison (no network) against the last version this install
+        saw. Returns {version, notes} once per upgrade, or None if there's nothing
+        new to show (fresh install, no version change, or no notes authored for the
+        current version). Does not persist last_seen_version itself -- the caller
+        must call acknowledge_release_notes() once the user has seen it, so a crash
+        before that shows it again next launch instead of silently skipping it."""
+        last_seen = self.settings.get("last_seen_version")
+        if last_seen is None:
+            # Fresh install -- onboarding covers this, not "what's new".
+            self.settings.set("last_seen_version", APP_VERSION)
+            return None
+        if last_seen == APP_VERSION:
+            return None
+        notes = RELEASE_NOTES.get(APP_VERSION)
+        if not notes:
+            self.settings.set("last_seen_version", APP_VERSION)
+            return None
+        return {"version": APP_VERSION, "notes": notes}
+
+    def acknowledge_release_notes(self):
+        self.settings.set("last_seen_version", APP_VERSION)
         return True
 
     def get_paths(self):

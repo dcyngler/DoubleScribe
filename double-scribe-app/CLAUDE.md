@@ -102,3 +102,23 @@ Windows console is cp1252 — emoji/✓ crash `print`).
     loads it on CPU, and writes `ready=…/status=…` to `%LOCALAPPDATA%\DoubleScribe\smoke.txt`
     (the hook is in `app/app.py`) — the first smoke run needs internet access.
   - Unsigned exe may be flagged by corporate AV; WebView2 is needed on target (ships with Windows 11).
+
+## Cutting a release
+The repo is public and the app checks `https://api.github.com/repos/dcyngler/DoubleScribe/releases/latest`
+on every launch (`app/api.py` `_check_for_update`) to show an "Update available" link in the
+status bar — it's a manual click-through to the release page, not a silent auto-updater. There's
+also an in-app "What's new" modal, driven by `app/release_notes.py`, shown once per version bump.
+
+Checklist, in order:
+1. Bump the version in **two places** (they must match — nothing enforces this automatically):
+   `APP_VERSION` in `app/api.py` and `MyAppVersion` in `DoubleScribe.iss`.
+2. Add an entry to `CHANGELOG.md` (full log) **and** a short bullet list for the same version key
+   in `app/release_notes.py` (terser — this is what actually renders in the in-app modal).
+3. Build: `.venv\Scripts\pyinstaller.exe DoubleScribe.spec --noconfirm`, then
+   `"%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" DoubleScribe.iss` → `installer\DoubleScribeSetup.exe`.
+4. `git tag vX.Y.Z && git push origin vX.Y.Z`.
+5. `gh release create vX.Y.Z installer\DoubleScribeSetup.exe --title "vX.Y.Z" --notes-file <changelog section for this version>`.
+
+The update check and "What's new" modal both read `APP_VERSION`/`NOTES` bundled at build time —
+there's no way for an already-installed copy to see release notes for a version newer than the
+one it's running, by design (it'll just see the "Update available" link until it's reinstalled).

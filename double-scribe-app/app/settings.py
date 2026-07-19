@@ -16,6 +16,9 @@ _DEFAULTS = {
     "profanity_filter": False,
     "consent_acknowledged": False,
     "consent_acknowledged_at": None,
+    "language": "en",
+    "onboarded": False,
+    "last_seen_version": None,
 }
 
 

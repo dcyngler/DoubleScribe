@@ -253,6 +253,10 @@ input,select{font-family:inherit;font-size:14px}
   cursor:pointer;margin-bottom:18px}
 .consent-check input{margin-top:3px;flex:0 0 auto}
 
+/* ---------- Onboarding / What's new ---------- */
+.modal-list{font-size:13px;line-height:1.7;color:var(--n600);margin:0 0 18px;padding-left:20px}
+.modal-list li{margin-bottom:4px}
+
 /* ---------- App settings ---------- */
 #appSettingsModal .modal{width:480px}
 .settings-row{display:flex;align-items:center;justify-content:space-between;gap:16px;
@@ -298,3 +302,14 @@ input,select{font-family:inherit;font-size:14px}
 
 ::-webkit-scrollbar{width:10px;height:10px}
 ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.14);border-radius:6px}
+
+/* ---------- RTL (Arabic, Hebrew) ---------- */
+html[dir="rtl"] .sidebar{border-right:none;border-left:1px solid var(--border)}
+html[dir="rtl"] .nav-item{border-left:none;border-right:3px solid transparent}
+html[dir="rtl"] .nav-item.active{border-left-color:transparent;border-right-color:var(--brand-700)}
+html[dir="rtl"] .card-title{padding-right:0;padding-left:96px}
+html[dir="rtl"] .card-actions{right:auto;left:10px}
+html[dir="rtl"] .gutter{border-right:none;border-left:1px solid var(--border);margin-right:0;margin-left:14px;text-align:left;padding-right:0;padding-left:14px}
+html[dir="rtl"] .detail-back .ico{transform:scaleX(-1)}
+html[dir="rtl"] .list-col.detail-open,
+html[dir="rtl"] .body.detail-open .list-col{border-right:none;border-left:1px solid var(--border)}

@@ -1,4 +1,6 @@
 .wrangler/
-website/node_modules/
 node_modules/
 .dev.vars
+.agents/
+.claude/skills/
+skills-lock.json

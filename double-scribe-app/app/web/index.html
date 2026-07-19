@@ -5,6 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Double Scribe</title>
   <link rel="icon" type="image/png" href="icon.png">
+  <script>
+    // Applied before first paint so an explicit light/dark choice doesn't flash the wrong theme.
+    // "System" (the default) needs no attribute -- CSS follows the OS via prefers-color-scheme.
+    (function () {
+      try {
+        var t = localStorage.getItem("ds_theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    })();
+  </script>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -168,6 +178,15 @@
     <div class="modal-head">
       <h2 data-i18n="modal_app_settings_title">App settings</h2>
       <button class="btn-icon" id="appSettingsClose">&times;</button>
+    </div>
+
+    <div class="settings-row">
+      <span class="settings-row-label" data-i18n="label_theme">Theme</span>
+      <select class="settings-select" id="settingsTheme">
+        <option value="system" data-i18n="option_theme_system">System</option>
+        <option value="light" data-i18n="option_theme_light">Light</option>
+        <option value="dark" data-i18n="option_theme_dark">Dark</option>
+      </select>
     </div>
 
     <div class="settings-row">

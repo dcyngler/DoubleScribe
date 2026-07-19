@@ -124,10 +124,25 @@ function setLanguage(code) {
   applyI18n();
 }
 
+/* ---------- theme (system / light / dark) ---------- */
+function applyTheme(mode) {
+  if (mode === "light" || mode === "dark") document.documentElement.setAttribute("data-theme", mode);
+  else { document.documentElement.removeAttribute("data-theme"); mode = "system"; }
+  try { localStorage.setItem("ds_theme", mode); } catch (e) {}
+  const sel = $("settingsTheme");
+  if (sel) sel.value = mode;
+}
+function initTheme() {
+  let mode = "system";
+  try { mode = localStorage.getItem("ds_theme") || "system"; } catch (e) {}
+  applyTheme(mode);
+}
+
 /* ---------- init ---------- */
 let _inited = false;
 function init() {
   if (_inited) return; _inited = true;
+  initTheme();
   api().get_settings().then(s => {
     S.lang = s.language || "en";
     applyI18n();
@@ -401,7 +416,7 @@ function startRecording() {
     if (!r || !r.ok) { toast(t("toast_could_not_start", { error: (r && r.error) || t("text_audio_error") })); return; }
     S.recording = true;
     S.liveLast = null; S.liveEl = null;
-    $("liveBody").innerHTML = "";
+    $("liveBody").innerHTML = `<div class="live-waiting" id="liveWaiting">${esc(t("live_waiting"))}</div>`;
     $("topbarIdle").classList.add("hidden");
     $("topbarRec").classList.remove("hidden");
     $("searchBar").classList.add("hidden");
@@ -423,6 +438,8 @@ function tickTimer() {
 }
 function appendLive(label, text, voiceChange) {
   const body = $("liveBody");
+  const waiting = $("liveWaiting");
+  if (waiting) waiting.remove();
   const who = label === "Me" ? "me" : "them";   // side/colour conveys the speaker
   if (who === S.liveLast && S.liveEl && !voiceChange) {
     S.liveEl.textContent += " " + text;          // coalesce same-speaker phrases
@@ -569,11 +586,18 @@ function bindUI() {
 
   $("appSettingsBtn").onclick = () => { $("appSettingsModal").classList.remove("hidden"); loadAppSettings(); };
   $("appSettingsClose").onclick = () => $("appSettingsModal").classList.add("hidden");
+
+  // Click-outside-to-close for dismissible modals only (consent/onboard/release-notes
+  // require an explicit acknowledgement click, so they're excluded).
+  ["audioModal", "appSettingsModal"].forEach(id => {
+    $(id).addEventListener("click", e => { if (e.target === $(id)) $(id).classList.add("hidden"); });
+  });
   $("profanityToggle").onchange = e => {
     api().set_profanity_filter(e.target.checked)
       .then(() => toast(e.target.checked ? t("toast_profanity_on") : t("toast_profanity_off")));
   };
   $("settingsLanguage").onchange = e => setLanguage(e.target.value);
+  $("settingsTheme").onchange = e => applyTheme(e.target.value);
   $("githubBtn").onclick = () => api().get_paths().then(p => api().open_url(p.source_url));
 
   // event delegation for nav

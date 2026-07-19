@@ -16,6 +16,7 @@ pillow==12.3.0            # icon handling
 pywin32==312              # Windows taskbar identity / shell integration
 sherpa-onnx==1.13.4       # voice-change detection (splits "Them" bubbles on a different remote
                           # voice); needs models/nemo_en_titanet_small.onnx, see CLAUDE.md
+cryptography==49.0.0      # verifies the Ed25519 signature on downloaded auto-update installers
 
 # Build tooling (only needed to produce the .exe / installer, not to run from source)
 pyinstaller==6.21.0

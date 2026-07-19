@@ -113,16 +113,19 @@ it with `/VERYSILENT /SUPPRESSMSGBOXES /NORESTART` and quits (`_window.destroy()
 Because the install is per-user (`PrivilegesRequired=lowest`), there's no UAC prompt. Inno's
 `CloseApplications`/`RestartApplications` (`DoubleScribe.iss`) handle the running exe/DLL locks,
 and a `skipifnotsilent` `[Run]` entry relaunches the app once the silent install finishes — so
-the user ends up back in the app on the new version with no dialogs at all. If a release has no
-`.exe` asset yet (upload still in progress), it falls back to opening the release page instead.
-There's also an in-app "What's new" modal, driven by `app/release_notes.py`, shown once per
-version bump — separate from the update check, just local content bundled at build time.
+the user ends up back in the app on the new version with no dialogs at all. There's also an
+in-app "What's new" modal, driven by `app/release_notes.py`, shown once per version bump —
+separate from the update check, just local content bundled at build time.
 
-**Caveat vs. Handy:** Handy's Tauri updater verifies a minisign signature on the downloaded
-artifact before installing. This flow has no equivalent signature check — it trusts the HTTPS
-connection to GitHub's release asset host, same trust boundary as the old manual-download link.
-Worth adding (e.g. a published SHA-256 checksum, or real code signing) before relying on this
-for anything more sensitive than what's already true today.
+**Signature verification (parity with Handy's minisign check):** every installer is signed
+with an Ed25519 key before it's attached to the release. `app/api.py` embeds the **public**
+half as `UPDATE_PUBKEY_B64`; `update-signing-key.pem` (repo root, gitignored, generated once by
+`scripts/generate_update_key.py`) holds the **private** half and must never be committed or
+leave this machine / your secure backup. `install_update()` requires a same-named `<exe>.sig`
+asset on the release — if it's missing, or the signature doesn't verify against
+`UPDATE_PUBKEY_B64`, the installer is deleted **without being run** and the UI falls back to the
+release-page link, same as if there were no asset at all. This means an unsigned or tampered
+release, or one still mid-upload, can never be silently auto-installed.
 
 Checklist, in order:
 1. Bump the version in **two places** (they must match — nothing enforces this automatically):
@@ -131,11 +134,12 @@ Checklist, in order:
    in `app/release_notes.py` (terser — this is what actually renders in the in-app modal).
 3. Build: `.venv\Scripts\pyinstaller.exe DoubleScribe.spec --noconfirm`, then
    `"%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" DoubleScribe.iss` → `installer\DoubleScribeSetup.exe`.
-4. `git tag vX.Y.Z && git push origin vX.Y.Z`.
-5. `gh release create vX.Y.Z installer\DoubleScribeSetup.exe --title "vX.Y.Z" --notes-file <changelog section for this version>`
-   — the `.exe` **must** be attached to the release for the in-app updater to find it (that's
-   what this command does); a tag/release with no asset just makes clients fall back to the
-   release-page link.
+4. Sign it: `.venv\Scripts\python.exe scripts\sign_release.py installer\DoubleScribeSetup.exe`
+   → writes `installer\DoubleScribeSetup.exe.sig` next to it.
+5. `git tag vX.Y.Z && git push origin vX.Y.Z`.
+6. `gh release create vX.Y.Z installer\DoubleScribeSetup.exe installer\DoubleScribeSetup.exe.sig --title "vX.Y.Z" --notes-file <changelog section for this version>`
+   — **both files must be attached** (exe *and* .sig) for the in-app updater to auto-install;
+   a release missing either just makes clients fall back to the release-page link.
 
 The update check and "What's new" modal both read `APP_VERSION`/`NOTES` bundled at build time —
 there's no way for an already-installed copy to see release notes for a version newer than the

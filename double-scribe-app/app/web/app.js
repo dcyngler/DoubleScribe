@@ -219,16 +219,19 @@ window.onUpdateAvailable = (info) => {
   link.classList.remove("hidden");
 };
 window.onUpdateProgress = (info) => {
-  const link = $("updateLink");
   $("updateLinkText").textContent = info.installing
     ? t("link_update_installing")
+    : info.verifying
+    ? t("link_update_verifying")
     : t("link_update_downloading", { pct: String(info.percent) });
 };
-window.onUpdateError = () => {
+window.onUpdateError = (reason) => {
   const link = $("updateLink");
   link._installing = false;
   link._failed = true;
-  $("updateLinkText").textContent = t("link_update_failed");
+  $("updateLinkText").textContent = reason === "signature"
+    ? t("link_update_failed_signature")
+    : t("link_update_failed");
 };
 
 /* ---------- devices ---------- */

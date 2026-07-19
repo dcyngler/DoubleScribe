@@ -3,6 +3,7 @@ pywebview bridge: exposes Python methods to the JS frontend, and pushes live
 events back into the page. Owns a Store (metadata) and a LiveEngine (capture).
 """
 
+import base64
 import json
 import os
 import subprocess
@@ -14,6 +15,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import webview
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from engine import LiveEngine
 from store import Store, TRANSCRIPT_DIR
@@ -23,6 +26,13 @@ from release_notes import NOTES as RELEASE_NOTES
 APP_VERSION = "0.4.1"
 UPDATE_REPO = "dcyngler/DoubleScribe"   # GitHub repo checked for newer releases
 SOURCE_URL = f"https://github.com/{UPDATE_REPO}"
+
+# Public half of the Ed25519 keypair from scripts/generate_update_key.py. Every
+# downloaded installer must carry a matching .sig (from scripts/sign_release.py)
+# signed with the private half, which never leaves the release machine -- this is
+# the same trust model as Handy's Tauri updater (minisign), just a different
+# signature format since there's no Tauri updater plugin for a Python app.
+UPDATE_PUBKEY_B64 = "TnmwR7VzAY88YohJ7rxIodBCmdsx4C7C8g7UI5iA9R4="
 
 
 def _version_tuple(v):
@@ -110,15 +120,26 @@ class Api:
                 data = json.loads(resp.read().decode("utf-8"))
             latest = (data.get("tag_name") or "").lstrip("vV")
             if latest and _version_tuple(latest) > _version_tuple(APP_VERSION):
+                assets = data.get("assets", [])
                 asset_url = None
-                for asset in data.get("assets", []):
+                exe_name = None
+                for asset in assets:
                     if asset.get("name", "").lower().endswith(".exe"):
                         asset_url = asset.get("browser_download_url")
+                        exe_name = asset.get("name")
                         break
+                sig_url = None
+                if exe_name:
+                    sig_name = (exe_name + ".sig").lower()
+                    for asset in assets:
+                        if asset.get("name", "").lower() == sig_name:
+                            sig_url = asset.get("browser_download_url")
+                            break
                 self._pending_update = {
                     "version": latest,
                     "url": data.get("html_url", ""),
                     "asset_url": asset_url,
+                    "sig_url": sig_url,
                 }
                 self._emit("onUpdateAvailable", self._pending_update)
         except Exception:
@@ -133,17 +154,27 @@ class Api:
         info = self._pending_update
         if not info:
             return False
-        if not info.get("asset_url"):
+        # Require a matching .sig too -- an unsigned installer never gets auto-run
+        # (see _do_install_update's verification step); the release page is the only
+        # fallback for those, same as if there were no asset at all.
+        if not info.get("asset_url") or not info.get("sig_url"):
             self.open_url(info["url"])
             return False
         threading.Thread(target=self._do_install_update, args=(info,), daemon=True).start()
         return True
 
+    def _verify_signature(self, data, sig_url):
+        req = urllib.request.Request(sig_url, headers={"User-Agent": "DoubleScribe"})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            signature = base64.b64decode(resp.read().decode("ascii").strip())
+        pubkey = Ed25519PublicKey.from_public_bytes(base64.b64decode(UPDATE_PUBKEY_B64))
+        pubkey.verify(signature, data)   # raises InvalidSignature on mismatch
+
     def _do_install_update(self, info):
+        installer_path = os.path.join(
+            tempfile.gettempdir(), f"DoubleScribeSetup-{info['version']}.exe"
+        )
         try:
-            installer_path = os.path.join(
-                tempfile.gettempdir(), f"DoubleScribeSetup-{info['version']}.exe"
-            )
             req = urllib.request.Request(info["asset_url"], headers={"User-Agent": "DoubleScribe"})
             with urllib.request.urlopen(req, timeout=30) as resp:
                 total = int(resp.headers.get("Content-Length", 0))
@@ -157,6 +188,15 @@ class Api:
                         downloaded += len(chunk)
                         pct = int(downloaded * 100 / total) if total else 0
                         self._emit("onUpdateProgress", {"percent": pct})
+
+            self._emit("onUpdateProgress", {"percent": 100, "verifying": True})
+            try:
+                self._verify_signature(Path(installer_path).read_bytes(), info["sig_url"])
+            except InvalidSignature:
+                os.remove(installer_path)
+                self._emit("onUpdateError", "signature")
+                return
+
             self._emit("onUpdateProgress", {"percent": 100, "installing": True})
             # Per-user install (PrivilegesRequired=lowest) -- no UAC prompt needed.
             # Inno's CloseApplications/RestartApplications handle any file locks the

@@ -46,9 +46,10 @@ else:
 
 # Packages with data files / native DLLs that PyInstaller can't fully trace statically.
 # pywebview pulls in the WebView2 + WinForms host DLLs; pythonnet ships Python.Runtime.dll;
-# sherpa_onnx ships a compiled extension module for the voice-change split.
+# sherpa_onnx ships a compiled extension module for the voice-change split; cryptography ships
+# a compiled Rust extension needed by the update-signature check in app/api.py.
 for pkg in ('faster_whisper', 'ctranslate2', 'soundcard', 'webview',
-            'clr_loader', 'pythonnet', 'cffi', 'sherpa_onnx'):
+            'clr_loader', 'pythonnet', 'cffi', 'sherpa_onnx', 'cryptography'):
     try:
         d, b, h = collect_all(pkg)
         datas += d

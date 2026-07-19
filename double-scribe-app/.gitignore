@@ -40,3 +40,11 @@ smoke.txt
 
 # Claude Code personal/local settings (per-machine, not shared)
 .claude/settings.local.json
+
+# ---------------------------------------------------------------------------
+# Update-signing private key — NEVER commit. Root of trust for the in-app
+# auto-updater's signature check (see scripts/generate_update_key.py). Keep a
+# backup of this file somewhere safe outside the repo; losing it means you
+# can't sign a verifiable update again without shipping a new public key.
+# ---------------------------------------------------------------------------
+update-signing-key.pem

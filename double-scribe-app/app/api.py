@@ -6,6 +6,7 @@ events back into the page. Owns a Store (metadata) and a LiveEngine (capture).
 import base64
 import json
 import os
+import re
 import subprocess
 import tempfile
 import threading
@@ -26,6 +27,7 @@ from release_notes import NOTES as RELEASE_NOTES
 APP_VERSION = "0.4.1"
 UPDATE_REPO = "dcyngler/DoubleScribe"   # GitHub repo checked for newer releases
 SOURCE_URL = f"https://github.com/{UPDATE_REPO}"
+DONATE_URL = "https://donate.stripe.com/eVqeVc4e0cIT9FsfvG4AU00"
 
 # Public half of the Ed25519 keypair from scripts/generate_update_key.py. Every
 # downloaded installer must carry a matching .sig (from scripts/sign_release.py)
@@ -171,8 +173,11 @@ class Api:
         pubkey.verify(signature, data)   # raises InvalidSignature on mismatch
 
     def _do_install_update(self, info):
+        # Sanitize before it's used in a filesystem path -- it's a GitHub tag_name and git
+        # ref rules already forbid path separators, but don't trust that transitively here.
+        safe_version = re.sub(r"[^A-Za-z0-9.\-]", "_", info["version"])
         installer_path = os.path.join(
-            tempfile.gettempdir(), f"DoubleScribeSetup-{info['version']}.exe"
+            tempfile.gettempdir(), f"DoubleScribeSetup-{safe_version}.exe"
         )
         try:
             req = urllib.request.Request(info["asset_url"], headers={"User-Agent": "DoubleScribe"})
@@ -278,7 +283,7 @@ class Api:
         return True
 
     def get_paths(self):
-        return {"source_url": SOURCE_URL}
+        return {"source_url": SOURCE_URL, "donate_url": DONATE_URL}
 
     def get_library(self):
         return self.store.list()

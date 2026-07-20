@@ -102,6 +102,9 @@ Windows console is cp1252 — emoji/✓ crash `print`).
     loads it on CPU, and writes `ready=…/status=…` to `%LOCALAPPDATA%\DoubleScribe\smoke.txt`
     (the hook is in `app/app.py`) — the first smoke run needs internet access.
   - Unsigned exe may be flagged by corporate AV; WebView2 is needed on target (ships with Windows 11).
+  - **Authenticode signing (SmartScreen) — not yet set up, see "Cutting a release" below for the
+    plan.** Until it is, first-time browser downloaders will see a SmartScreen "Windows protected
+    your PC" interstitial.
 
 ## Cutting a release
 The repo is public and the app checks `https://api.github.com/repos/dcyngler/DoubleScribe/releases/latest`
@@ -127,6 +130,33 @@ asset on the release — if it's missing, or the signature doesn't verify agains
 release-page link, same as if there were no asset at all. This means an unsigned or tampered
 release, or one still mid-upload, can never be silently auto-installed.
 
+**Authenticode signing (SmartScreen), copied from Handy's approach:** Handy
+(github.com/cjpais/Handy, the project this app's update flow is modeled on) signs its Windows
+builds with **Azure Trusted Signing** via the `trusted-signing-cli` / `artifact-signing-cli` tool
+(github.com/Levminer/trusted-signing-cli — renamed `artifact-signing-cli` as of v0.11.0; ships
+pre-built Windows binaries, no Rust toolchain needed), invoked as:
+```
+artifact-signing-cli -e <endpoint> -a <account-name> -c <cert-profile-name> -d "Double Scribe" installer\DoubleScribeSetup.exe
+```
+authenticated via an Azure service principal (`AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`,
+`AZURE_TENANT_ID` env vars). This is the same technique referenced in Handy's `tauri.conf.json`:
+`trusted-signing-cli -e https://eus.codesigning.azure.net/ -a CJ-Signing -c cjpais-dev -d Handy %1`.
+
+**Not set up yet for this project** — requires, one-time, outside this repo:
+1. An Azure subscription and a **Trusted Signing Account** + **Certificate Profile** (Public Trust
+   type) created in the Azure Portal. For an individual (not a registered business), this needs
+   identity verification through Microsoft's process (government ID, can take a few days).
+   Cost is per Azure's current Trusted Signing pricing (Basic tier, billed monthly).
+2. An Entra ID App Registration (service principal) granted the "Trusted Signing Certificate
+   Profile Signer" role on that account — its client ID / secret / tenant ID become
+   `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` / `AZURE_TENANT_ID`.
+
+**Critical ordering once this exists:** Authenticode-sign the compiled installer **before** the
+Ed25519 step (`scripts/sign_release.py`), not after — Authenticode signing embeds a signature
+into the PE file itself (changes its bytes), so the Ed25519 signature must be computed over the
+*final* signed file, or it won't verify. Insert the Authenticode step between checklist steps 3
+and 4 below.
+
 Checklist, in order:
 1. Bump the version in **two places** (they must match — nothing enforces this automatically):
    `APP_VERSION` in `app/api.py` and `MyAppVersion` in `DoubleScribe.iss`.
@@ -134,8 +164,11 @@ Checklist, in order:
    in `app/release_notes.py` (terser — this is what actually renders in the in-app modal).
 3. Build: `.venv\Scripts\pyinstaller.exe DoubleScribe.spec --noconfirm`, then
    `"%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" DoubleScribe.iss` → `installer\DoubleScribeSetup.exe`.
+3a. **(Once Azure Trusted Signing is set up — currently skipped)** Authenticode-sign:
+    `artifact-signing-cli -e <endpoint> -a <account> -c <profile> -d "Double Scribe" installer\DoubleScribeSetup.exe`.
 4. Sign it: `.venv\Scripts\python.exe scripts\sign_release.py installer\DoubleScribeSetup.exe`
-   → writes `installer\DoubleScribeSetup.exe.sig` next to it.
+   → writes `installer\DoubleScribeSetup.exe.sig` next to it. Must run **after** step 3a if that
+   step was performed (see ordering note above).
 5. `git tag vX.Y.Z && git push origin vX.Y.Z`.
 6. `gh release create vX.Y.Z installer\DoubleScribeSetup.exe installer\DoubleScribeSetup.exe.sig --title "vX.Y.Z" --notes-file <changelog section for this version>`
    — **both files must be attached** (exe *and* .sig) for the in-app updater to auto-install;

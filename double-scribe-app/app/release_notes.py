@@ -6,6 +6,9 @@ falls back to English for languages without a translation for these keys.
 """
 
 NOTES = {
+    "0.4.3": [
+        "The recording-consent notice will show once more, even if you've already seen it.",
+    ],
     "0.4.2": [
         "Donate button is now live.",
         "Security hardening for the auto-updater.",

@@ -7,6 +7,14 @@ When you cut a release, add an entry here **and** a matching short bullet
 list in `app/release_notes.py` (that one drives the in-app "What's new"
 modal; this file is the full human-readable log).
 
+## [0.4.3] - 2026-07-21
+
+### Fixed
+- The recording-consent notice is now versioned, so an install that already had it marked
+  acknowledged (from an earlier build) will be shown it again once. This closes a gap where
+  the gate could silently stay marked "acknowledged" across upgrades even if it hadn't
+  actually been shown/re-read on the current build.
+
 ## [0.4.2] - 2026-07-21
 
 ### Added

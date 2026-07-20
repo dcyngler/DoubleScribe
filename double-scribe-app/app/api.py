@@ -24,8 +24,14 @@ from store import Store, TRANSCRIPT_DIR
 from settings import Settings
 from release_notes import NOTES as RELEASE_NOTES
 
-APP_VERSION = "0.4.2"
+APP_VERSION = "0.4.3"
 UPDATE_REPO = "dcyngler/DoubleScribe"   # GitHub repo checked for newer releases
+
+# Bump this whenever the consent notice's wording changes materially, or when
+# an install is found to have skipped past it without actually showing it --
+# it forces every existing user (even ones with consent_acknowledged already
+# true) to see and re-accept the gate once on their next launch.
+CONSENT_VERSION = 2
 SOURCE_URL = f"https://github.com/{UPDATE_REPO}"
 DONATE_URL = "https://donate.stripe.com/eVqeVc4e0cIT9FsfvG4AU00"
 
@@ -231,7 +237,9 @@ class Api:
         return True
 
     def get_settings(self):
-        return self.settings.as_dict()
+        data = self.settings.as_dict()
+        data["consent_acknowledged"] = data.get("consent_version_acknowledged", 0) >= CONSENT_VERSION
+        return data
 
     def set_profanity_filter(self, enabled):
         enabled = bool(enabled)
@@ -249,9 +257,12 @@ class Api:
 
     def acknowledge_consent(self):
         """User clicked through the recording-consent gate; record it (with a timestamp,
-        so there's a trail showing the warning was shown and accepted, not just skipped)."""
+        so there's a trail showing the warning was shown and accepted, not just skipped),
+        tagged with the CONSENT_VERSION shown so a future wording change can re-prompt
+        everyone regardless of this raw boolean."""
         self.settings.set("consent_acknowledged", True)
         self.settings.set("consent_acknowledged_at", datetime.now(timezone.utc).isoformat())
+        self.settings.set("consent_version_acknowledged", CONSENT_VERSION)
         return True
 
     def acknowledge_onboarding(self):

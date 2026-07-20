@@ -132,11 +132,14 @@ automatically on first write — no manual provisioning needed. If the token
 ever leaks, rotate it by generating a new random value and re-running the
 `STATS_TOKEN` secret put above.
 
-## Before going live
+## Where the download actually comes from
 
-The Download button on the page points to `/downloads/DoubleScribeSetup.exe`, which
-doesn't exist yet: no installer has been built. Either:
+Every "Download" link on the site points at `/api/download`, which redirects to
+`https://github.com/dcyngler/DoubleScribe/releases/latest/download/DoubleScribeSetup.exe`.
+No installer file lives in this repo or in `public/` — the binary (150-300MB) is far past
+Cloudflare Pages' 25MB per-file limit, so GitHub Releases hosts it instead. See
+`double-scribe-app/CLAUDE.md` → "Cutting a release" for how a release gets built and published.
 
-- Build the installer (see `double-scribe-app/CLAUDE.md` → Distribution) and drop
-  `DoubleScribeSetup.exe` into `public/downloads/` before deploying, or
-- Point the Download button at a GitHub Releases URL instead (edit `index.html`).
+Because `DoubleScribe.iss` always names its output `DoubleScribeSetup.exe` (no version in the
+filename), the `releases/latest/download/...` URL keeps resolving correctly for every future
+release automatically — no website change needed when a new version ships.

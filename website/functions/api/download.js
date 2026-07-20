@@ -12,5 +12,8 @@ export async function onRequestGet({ request, env }) {
     indexes: ["download"],
   });
 
-  return Response.redirect(new URL("/downloads/DoubleScribeSetup.exe", request.url), 302);
+  return Response.redirect(
+    "https://github.com/dcyngler/DoubleScribe/releases/latest/download/DoubleScribeSetup.exe",
+    302,
+  );
 }

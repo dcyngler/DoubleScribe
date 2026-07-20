@@ -1,7 +1,0 @@
-{
-  "name": "double-scribe-website",
-  "private": true,
-  "dependencies": {
-    "stripe": "^22.3.2"
-  }
-}

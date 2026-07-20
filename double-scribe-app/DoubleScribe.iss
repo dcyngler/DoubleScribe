@@ -12,7 +12,7 @@
 
 #define MyAppName "Double Scribe"
 #define MyAppVersion "0.4.3"
-#define MyAppPublisher "Bevington Group"
+#define MyAppPublisher "Double Scribe"
 #define MyAppExeName "DoubleScribe.exe"
 
 [Setup]
@@ -37,11 +37,18 @@ WizardStyle=modern
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 ; Needed for the in-app silent auto-updater (api.py install_update): when the running
-; app's own exe/DLLs are locked, Setup closes it via Restart Manager and relaunches it
-; after copying files -- these are Inno's defaults, spelled out here since the app now
+; app's own exe/DLLs are locked, Setup closes it via Restart Manager so the copy can
+; proceed -- CloseApplications=yes is Inno's default, spelled out here since the app now
 ; depends on this behaviour rather than just benefiting from it.
 CloseApplications=yes
-RestartApplications=yes
+; Deliberately NOT RestartApplications=yes: that would have Setup auto-relaunch the app
+; it just closed *in addition to* the manual "skipifnotsilent" [Run] entry below, which
+; also unconditionally relaunches on a silent/very-silent install. Both firing at once
+; launched DoubleScribe.exe twice right after an auto-update, and the two cold starts
+; racing to import faster_whisper's `av` dependency could collide with an AV scanner
+; still holding an exclusive lock on the freshly-written _core.pyd/DLLs, producing a
+; transient "DLL load failed ... used by another process" crash. One relaunch path only.
+RestartApplications=no
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

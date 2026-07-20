@@ -51,7 +51,7 @@ def main():
     # instead of grouping under pythonw.exe and showing the generic Python icon.
     try:
         import ctypes
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("Bevington.DoubleScribe")
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("DoubleScribe.DoubleScribe")
     except Exception:
         pass
 

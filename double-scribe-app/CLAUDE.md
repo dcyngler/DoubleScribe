@@ -47,7 +47,7 @@ engine and must keep working — treat them as stable; the new UI reuses them.
   old `Speaker N` → `Them` **for display only** (never rewrites files).
 - `api.py` — pywebview bridge (methods called from JS as `window.pywebview.api.*`) + pushes
   live events to JS via `window.evaluate_js`.
-- `app.py` — bootstrap. Sets `SetCurrentProcessExplicitAppUserModelID("Bevington.DoubleScribe")`
+- `app.py` — bootstrap. Sets `SetCurrentProcessExplicitAppUserModelID("DoubleScribe.DoubleScribe")`
   so the taskbar shows our name/icon; `webview.start(icon="app/icon.ico")` (WebView2 needs `.ico`).
 - `web/index.html`, `web/styles.css`, `web/app.js` — the frontend (sidebar/list/detail + live
   view). Transcript shows as **chat bubbles**: Me = right, brand blue `#0033CC`; Them = left,

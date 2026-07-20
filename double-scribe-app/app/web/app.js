@@ -635,6 +635,7 @@ function bindUI() {
   $("settingsLanguage").onchange = e => setLanguage(e.target.value);
   $("settingsTheme").onchange = e => applyTheme(e.target.value);
   $("githubBtn").onclick = () => api().get_paths().then(p => api().open_url(p.source_url));
+  $("donateBtn").onclick = () => api().get_paths().then(p => api().open_url(p.donate_url));
 
   // event delegation for nav
   $("nav").addEventListener("click", e => {

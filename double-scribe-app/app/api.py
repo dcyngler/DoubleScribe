@@ -24,7 +24,7 @@ from store import Store, TRANSCRIPT_DIR
 from settings import Settings
 from release_notes import NOTES as RELEASE_NOTES
 
-APP_VERSION = "0.4.1"
+APP_VERSION = "0.4.2"
 UPDATE_REPO = "dcyngler/DoubleScribe"   # GitHub repo checked for newer releases
 SOURCE_URL = f"https://github.com/{UPDATE_REPO}"
 DONATE_URL = "https://donate.stripe.com/eVqeVc4e0cIT9FsfvG4AU00"

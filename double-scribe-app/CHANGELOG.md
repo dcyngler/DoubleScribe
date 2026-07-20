@@ -7,6 +7,19 @@ When you cut a release, add an entry here **and** a matching short bullet
 list in `app/release_notes.py` (that one drives the in-app "What's new"
 modal; this file is the full human-readable log).
 
+## [0.4.2] - 2026-07-21
+
+### Added
+- Donate button is now live, linking out to Stripe.
+
+### Fixed
+- Auto-updater now sanitizes the downloaded release's version string before using it in a
+  temp file path, instead of trusting it as-is.
+
+### Changed
+- Website download link now redirects through GitHub's `releases/latest` alias so it always
+  resolves to the newest signed build, and donation links point at the live Stripe page.
+
 ## [0.4.1] - 2026-07-20
 
 ### Added

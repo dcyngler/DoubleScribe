@@ -6,6 +6,10 @@ falls back to English for languages without a translation for these keys.
 """
 
 NOTES = {
+    "0.4.2": [
+        "Donate button is now live.",
+        "Security hardening for the auto-updater.",
+    ],
     "0.4.1": [
         "First public release of Double Scribe.",
         "Fully local, offline transcription -- audio never leaves your machine.",

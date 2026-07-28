@@ -456,7 +456,7 @@ function startRecording() {
     $("topbarRec").classList.remove("hidden");
     $("searchBar").classList.add("hidden");
     closeDetail();
-    $("listPanel").classList.add("hidden");
+    $("listCol").classList.add("hidden");
     $("livePanel").classList.remove("hidden");
     S.recStart = Date.now();
     $("recTimer").textContent = "00:00";
@@ -499,7 +499,7 @@ function finishRecording(entry) {
   $("topbarRec").classList.add("hidden");
   $("topbarIdle").classList.remove("hidden");
   $("livePanel").classList.add("hidden");
-  $("listPanel").classList.remove("hidden");
+  $("listCol").classList.remove("hidden");
   $("recTitle").value = "";
   $("stopBtn").disabled = false; $("stopBtn").textContent = t("btn_stop_listening");
   api().get_library().then(lib => {

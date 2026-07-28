@@ -7,6 +7,14 @@ When you cut a release, add an entry here **and** a matching short bullet
 list in `app/release_notes.py` (that one drives the in-app "What's new"
 modal; this file is the full human-readable log).
 
+## [0.4.4] - 2026-07-28
+
+### Fixed
+- The live transcript panel only filled about half the window while recording. Recording start
+  was hiding the inner card list but leaving its flex container in place, which still claimed
+  half the row width next to the live panel. The whole list column is now hidden, so the live
+  panel expands to fill the window.
+
 ## [0.4.3] - 2026-07-21
 
 ### Fixed

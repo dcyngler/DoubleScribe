@@ -6,6 +6,9 @@ falls back to English for languages without a translation for these keys.
 """
 
 NOTES = {
+    "0.4.4": [
+        "Fixed the live transcript view only filling half the window while recording.",
+    ],
     "0.4.3": [
         "The recording-consent notice will show once more, even if you've already seen it.",
     ],

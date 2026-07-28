@@ -16,6 +16,7 @@ const S = {
   filters: { tags: [], folder: "", favourite: false, dateFrom: "", dateTo: "", durMin: "", durMax: "", sort: "newest" },
   recStart: 0, recTimer: null,
   liveLast: null, liveEl: null,
+  stopping: false,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -196,6 +197,13 @@ function pollStatus() {
 }
 function setStatusMsg(msg) {
   S._lastStatusMsg = msg;
+  if (S.stopping && msg) {
+    // Live-session Stop is in progress: engine.py's worker may still be draining a
+    // queued backlog before it can save. Surface that on the Stop button itself
+    // instead of leaving it stuck on a plain "Saving..." with no sense of progress.
+    $("stopBtn").textContent = msg;
+    return;
+  }
   if (!S.ready && msg && msg !== "ready")
     $("startBtn").innerHTML = `<span class="dot-red"></span> ${esc(msg)}`;
   else if (!S.recording)
@@ -489,6 +497,7 @@ function appendLive(label, text, voiceChange) {
 }
 function stopRecording() {
   if (!S.recording) return;
+  S.stopping = true;
   $("stopBtn").disabled = true;
   $("stopBtn").textContent = t("text_saving");
   api().stop($("recTitle").value);
@@ -496,6 +505,7 @@ function stopRecording() {
 function finishRecording(entry) {
   clearInterval(S.recTimer); S.recTimer = null;
   S.recording = false;
+  S.stopping = false;
   $("topbarRec").classList.add("hidden");
   $("topbarIdle").classList.remove("hidden");
   $("livePanel").classList.add("hidden");

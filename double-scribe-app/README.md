@@ -30,7 +30,8 @@ Open `transcriber.py` and edit the block near the top:
 
 | Setting | Default | What it does |
 |---|---|---|
-| `MODEL_SIZE` | `"small"` | Accuracy vs speed: `tiny` < `base` < `small` < `medium` < `large-v3` |
+| `MODEL_SIZE_GPU` | `"small"` | Model used when a CUDA GPU is available: `tiny` < `base` < `small` < `medium` < `large-v3` |
+| `MODEL_SIZE_CPU` | `"base"` | Model used on CPU (no GPU, or the packaged build) — smaller so live two-channel transcription can keep up in real time |
 | `SAVE_TRANSCRIPTS` | `True` | Save each transcript to a `.txt` file |
 | `KEEP_AUDIO` | `False` | Leave off — audio is never written to disk |
 

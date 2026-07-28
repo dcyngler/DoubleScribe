@@ -8,6 +8,7 @@ Tkinter GUI, reporting results through plain callbacks so any frontend can
 consume them.
 """
 
+import os
 import sys
 import time
 import queue
@@ -25,6 +26,19 @@ import live_transcriber as live       # LiveChannel, VoiceChangeDetector, transc
 import profanity_filter
 
 SAMPLE_RATE = live.SAMPLE_RATE
+
+# Temporary diagnostics for the live-latency/stop-hang investigation (see
+# claude/plans -- "Investigate & fix live-transcription latency/stop-hang
+# regression"). Off by default; set DS_LIVE_DEBUG=1 to print channel counts,
+# work-queue backlog, per-utterance real-time factor, and stop-drain timing
+# to stderr. Safe to leave in (no-op unless the env var is set) or strip once
+# the investigation concludes.
+_DEBUG = os.environ.get("DS_LIVE_DEBUG") == "1"
+
+
+def _dbg(msg):
+    if _DEBUG:
+        print(f"[live-debug {time.strftime('%H:%M:%S')}] {msg}", file=sys.stderr, flush=True)
 
 
 def _group_turns(session):
@@ -145,6 +159,10 @@ class LiveEngine:
         if not specs:
             raise RuntimeError("No audio devices available to capture")
 
+        _dbg(f"start(out_index={out_index}, in_index={in_index}): opening {len(specs)} "
+             f"channel(s) -- Them={[d.name for (l, d, s) in specs if l == 'Them']}, "
+             f"Me={[d.name for (l, d, s) in specs if l == 'Me']}")
+
         self.session = []
         self._recent = []
         self.stop_event = threading.Event()
@@ -176,7 +194,22 @@ class LiveEngine:
                 label, audio = self.work_q.get(timeout=0.2)
             except queue.Empty:
                 continue
+            if _DEBUG:
+                dur = audio.size / SAMPLE_RATE
+                t0 = time.monotonic()
             text = live.transcribe_utterance(self.model, audio)
+            backlog = self.work_q.qsize()   # still-pending chunks -- growth = falling behind
+            if _DEBUG:
+                infer = time.monotonic() - t0
+                rtf = infer / dur if dur else float("inf")
+                _dbg(f"[{label}] audio={dur:.2f}s infer={infer:.2f}s RTF={rtf:.2f} "
+                     f"backlog_remaining={backlog}")
+            if self.stop_event.is_set():
+                # Stop was pressed but there's still a queued backlog to transcribe before
+                # _finish() can save -- surface it instead of a silent "Saving..." hang.
+                self.on_status(
+                    f"Finishing -- transcribing {backlog} more phrase(s)..." if backlog
+                    else "Finishing -- saving...")
             if not text:
                 continue
             if self.censor_profanity:
@@ -212,13 +245,23 @@ class LiveEngine:
         self.recording = False
         self._elapsed = self.elapsed_seconds()
         self.stop_event.set()
+        _dbg(f"stop(): work_q backlog at stop-signal={self.work_q.qsize()}")
         threading.Thread(target=self._finish, daemon=True).start()
 
     def _finish(self):
+        t0 = time.monotonic()
         for c in self.channels:
+            tj = time.monotonic()
             c.join(timeout=5)
+            _dbg(f"_finish(): joined channel '{c.label}' in {time.monotonic() - tj:.2f}s "
+                 f"(alive={c.is_alive()})")
         if self._worker_thread:
+            backlog = self.work_q.qsize()
+            tw = time.monotonic()
             self._worker_thread.join(timeout=60)
+            _dbg(f"_finish(): worker drained {backlog} pending chunk(s) in "
+                 f"{time.monotonic() - tw:.2f}s (alive={self._worker_thread.is_alive()})")
+        _dbg(f"_finish(): total stop-to-save time {time.monotonic() - t0:.2f}s")
         meta = self._save()
         self.on_saved(meta)
 

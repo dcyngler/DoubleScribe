@@ -1,0 +1,14 @@
+# Dev/test-only tooling -- not needed to run the app itself. Install with:
+#   .venv\Scripts\python -m pip install -r requirements.txt -r requirements-dev.txt
+
+pytest==8.3.4
+pytest-bdd==7.3.0
+
+# Mutation testing (mutmut) does NOT currently work in this project's dev environment
+# (Python 3.14 on Windows): mutmut 3.x hard-imports the POSIX-only `resource` module;
+# every mutmut 2.x line's cache backend (pony.orm) fails deepcopy-ing internal state
+# with `TypeError: cannot pickle 'itertools.count' object` under 3.14, regardless of
+# version (tried 2.4.4 and 2.5.1). Both are upstream incompatibilities, not something
+# fixable from this repo. If mutation testing is wanted, run it in CI on Linux/older
+# Python, or evaluate cosmic-ray as an alternative that doesn't depend on pony.orm.
+

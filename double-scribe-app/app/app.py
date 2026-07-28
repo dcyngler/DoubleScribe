@@ -33,7 +33,8 @@ def _smoke_test():
     api = Api()
     api.boot()                      # _window is None -> UI pushes are no-ops
     voice_split = api.engine.voice_detector is not None
-    result = (f"ready={api._ready}\nstatus={api._status}\nmodel={core.MODEL_DIR}\n"
+    result = (f"ready={api._ready}\nstatus={api._status}\n"
+              f"model_size={core.ACTIVE_MODEL_SIZE}\nmodel_dir={core.ACTIVE_MODEL_DIR}\n"
               f"voice_split={voice_split}\n")
     try:
         (core.DATA_DIR / "smoke.txt").write_text(result, encoding="utf-8")

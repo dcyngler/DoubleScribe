@@ -6,6 +6,9 @@ falls back to English for languages without a translation for these keys.
 """
 
 NOTES = {
+    "0.4.5": [
+        "Fixed live transcription lagging and Stop hanging on machines without a working GPU.",
+    ],
     "0.4.4": [
         "Fixed the live transcript view only filling half the window while recording.",
     ],

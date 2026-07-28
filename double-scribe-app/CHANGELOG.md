@@ -7,6 +7,26 @@ When you cut a release, add an entry here **and** a matching short bullet
 list in `app/release_notes.py` (that one drives the in-app "What's new"
 modal; this file is the full human-readable log).
 
+## [0.4.5] - 2026-07-29
+
+### Fixed
+- Live transcription could lag well behind speech and "Stop" could hang for a long time on
+  machines without a working CUDA GPU. `load_model()` was falling back to CPU/int8 while still
+  requesting the "small" Whisper model, which measured at roughly 0.4-1.1x real time per
+  utterance -- not enough headroom for two concurrent live channels (Me + Them) to stay caught
+  up over a call, so a backlog built up silently and Stop had to drain it before it could save.
+  The CPU fallback now uses a smaller "base" model (MODEL_SIZE_CPU), which runs several times
+  faster on CPU/int8; the GPU path is unchanged.
+- Stopping a live session now shows drain progress ("Finishing -- transcribing N more
+  phrase(s)...") on the Stop button instead of a silent hang if any backlog remains.
+
+### Added
+- A pytest-based test suite (`tests/`) covering the live-transcription pipeline: turn grouping,
+  cross-device duplicate suppression, AUTO-vs-pinned device selection, endpointing, voice-change
+  detection, and the CPU/GPU model-size fallback, plus Gherkin/BDD acceptance specs and reusable
+  QA-metric helpers (real-time factor, time-to-first-phrase, stop-to-saved latency, backlog
+  depth). See `requirements-dev.txt`.
+
 ## [0.4.4] - 2026-07-28
 
 ### Fixed

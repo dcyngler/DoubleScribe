@@ -99,17 +99,32 @@ DATA_DIR = _data_dir()
 # ---------------------------------------------------------------------------
 # Settings -- tweak these to taste
 # ---------------------------------------------------------------------------
-MODEL_SIZE = "small"        # "tiny", "base", "small", "medium", "large-v3"
-                            # larger = more accurate but slower. "small" is a good start.
+# "tiny", "base", "small", "medium", "large-v3" -- larger = more accurate but slower.
+# Two sizes because CPU and GPU have very different real-time budgets: measured on
+# a laptop CPU (int8), "small" runs at ~0.4-1.1x real-time *per utterance*, which
+# doesn't leave headroom for two concurrent live channels (Me + Them) to stay caught
+# up over a whole call -- that backlog is what makes live phrases lag and Stop hang
+# while it drains. "small" is fine on GPU (float16), which has much more headroom.
+MODEL_SIZE_GPU = "small"
+MODEL_SIZE_CPU = "base"     # ~3-8x faster than "small" on CPU/int8, modest accuracy cost
+MODEL_SIZE = MODEL_SIZE_GPU  # back-compat name (README, smoke test): the GPU-preferred size
 SAMPLE_RATE = 16000         # Whisper expects 16 kHz; soundcard resamples for us.
 CHUNK_SECONDS = 0.1         # how often we pull audio from the device (100 ms)
 SAVE_TRANSCRIPTS = True     # write each transcript to a .txt next to this script
 KEEP_AUDIO = False          # leave False: audio is never written to disk
 TRANSCRIPT_DIR = DATA_DIR / "transcripts"
 INDEX_PATH = DATA_DIR / "index.json"   # library metadata (owned by app/store.py)
-# Downloaded on first run (not bundled -- keeps the installer small) and cached
-# here for every run after that. Writable per-user location, survives uninstall.
-MODEL_DIR = DATA_DIR / "models" / f"whisper-{MODEL_SIZE}"
+
+
+def _model_dir(size):
+    """Downloaded on first run (not bundled -- keeps the installer small) and cached
+    here for every run after that. Writable per-user location, survives uninstall."""
+    return DATA_DIR / "models" / f"whisper-{size}"
+
+
+MODEL_DIR = _model_dir(MODEL_SIZE_GPU)   # back-compat name; load_model() picks per-device
+ACTIVE_MODEL_SIZE = None    # set by load_model() to whichever size actually loaded
+ACTIVE_MODEL_DIR = None     # ditto, for the smoke test / diagnostics
 
 # -- Speaker identification (diarisation) ----------------------------------
 # Splits the "Them" channel into Speaker 1 / Speaker 2 / ... using small ONNX
@@ -176,44 +191,53 @@ def make_mic_recorder():
 # ---------------------------------------------------------------------------
 # Transcription
 # ---------------------------------------------------------------------------
-def ensure_model(status_cb):
-    """Make sure the Whisper model is on disk, downloading it once if needed.
+def ensure_model(size, status_cb):
+    """Make sure the given-size Whisper model is on disk, downloading it once if needed.
 
     Only relevant for the packaged build, which no longer bundles the model
-    (that was most of the ~500MB installer) -- it downloads into MODEL_DIR on
-    first run and reuses it on every run after (no network call once model.bin
-    exists). In dev mode this is a no-op: WhisperModel(MODEL_SIZE, ...) already
-    manages its own download/cache under ~/.cache/huggingface.
+    (that was most of the ~500MB installer) -- it downloads into that size's
+    model dir on first run and reuses it on every run after (no network call
+    once model.bin exists). In dev mode this is a no-op: WhisperModel(size, ...)
+    already manages its own download/cache under ~/.cache/huggingface.
     """
-    if not getattr(sys, "frozen", False) or (MODEL_DIR / "model.bin").exists():
+    dir_ = _model_dir(size)
+    if not getattr(sys, "frozen", False) or (dir_ / "model.bin").exists():
         return
-    status_cb(f"Downloading speech model '{MODEL_SIZE}' (one-time, ~460MB)...")
+    status_cb(f"Downloading speech model '{size}' (one-time)...")
     from faster_whisper import download_model
-    MODEL_DIR.parent.mkdir(parents=True, exist_ok=True)
-    download_model(MODEL_SIZE, output_dir=str(MODEL_DIR))
+    dir_.parent.mkdir(parents=True, exist_ok=True)
+    download_model(size, output_dir=str(dir_))
 
 
 def load_model(status_cb):
     """Load Whisper, preferring the GPU and falling back to CPU.
+
+    GPU and CPU use different model sizes (MODEL_SIZE_GPU / MODEL_SIZE_CPU --
+    see their definitions above for why) since they have very different
+    real-time budgets for a live, two-channel (Me + Them) session.
 
     Crucially this runs a tiny test transcription on each device: loading a
     model on CUDA can succeed even when the GPU compute libraries are missing,
     and the failure only shows up at inference time. Probing here means we fall
     back to CPU cleanly instead of crashing the first time you press Stop.
     """
-    ensure_model(status_cb)
+    global ACTIVE_MODEL_SIZE, ACTIVE_MODEL_DIR
     probe = (np.random.randn(8000).astype(np.float32)) * 0.01  # ~0.5s of quiet noise
-    # Packaged build downloads the model to MODEL_DIR (see ensure_model above);
-    # development loads by name (from the HuggingFace cache) and prefers the GPU.
-    ref = str(MODEL_DIR) if (getattr(sys, "frozen", False) and (MODEL_DIR / "model.bin").exists()) else MODEL_SIZE
-    devices = (("cpu", "int8"),) if getattr(sys, "frozen", False) \
-        else (("cuda", "float16"), ("cpu", "int8"))
-    for device, compute in devices:
+    frozen = getattr(sys, "frozen", False)
+    devices = (("cpu", "int8", MODEL_SIZE_CPU),) if frozen \
+        else (("cuda", "float16", MODEL_SIZE_GPU), ("cpu", "int8", MODEL_SIZE_CPU))
+    for device, compute, size in devices:
         try:
-            status_cb(f"Loading Whisper '{MODEL_SIZE}' on {device.upper()}...")
+            ensure_model(size, status_cb)
+            # Packaged build loads from its downloaded model dir (see ensure_model above);
+            # development loads by name (from the HuggingFace cache).
+            dir_ = _model_dir(size)
+            ref = str(dir_) if (frozen and (dir_ / "model.bin").exists()) else size
+            status_cb(f"Loading Whisper '{size}' on {device.upper()}...")
             model = WhisperModel(ref, device=device, compute_type=compute)
             list(model.transcribe(probe, beam_size=1)[0])  # force real inference
-            status_cb(f"Ready (running on {device.upper()}). Press Start.")
+            status_cb(f"Ready ('{size}' on {device.upper()}). Press Start.")
+            ACTIVE_MODEL_SIZE, ACTIVE_MODEL_DIR = size, dir_
             return model
         except Exception:
             continue

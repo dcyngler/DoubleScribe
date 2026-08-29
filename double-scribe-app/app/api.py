@@ -25,7 +25,7 @@ from store import Store, TRANSCRIPT_DIR
 from settings import Settings
 from release_notes import NOTES as RELEASE_NOTES
 
-APP_VERSION = "0.4.5"
+APP_VERSION = "0.4.6"
 UPDATE_REPO = "dcyngler/DoubleScribe"   # GitHub repo checked for newer releases
 
 # Bump this whenever the consent notice's wording changes materially, or when

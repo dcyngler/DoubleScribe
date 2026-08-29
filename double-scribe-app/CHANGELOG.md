@@ -7,6 +7,13 @@ When you cut a release, add an entry here **and** a matching short bullet
 list in `app/release_notes.py` (that one drives the in-app "What's new"
 modal; this file is the full human-readable log).
 
+## [0.4.6] - 2026-08-29
+
+### Added
+- App settings now shows "App Data Directory" and "Log Directory" rows (under Source code),
+  each with the resolved path and an Open button that opens it in Explorer -- makes it easier
+  to find transcripts/settings or the startup log without knowing the `%LOCALAPPDATA%` path.
+
 ## [0.4.5] - 2026-07-29
 
 ### Fixed

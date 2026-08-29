@@ -6,6 +6,9 @@ falls back to English for languages without a translation for these keys.
 """
 
 NOTES = {
+    "0.4.6": [
+        "App settings now shows the App Data and Log directories, with an Open button for each.",
+    ],
     "0.4.5": [
         "Fixed live transcription lagging and Stop hanging on machines without a working GPU.",
     ],

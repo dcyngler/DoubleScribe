@@ -250,6 +250,12 @@ function loadAppSettings() {
     $("profanityToggle").checked = !!s.profanity_filter;
     $("autoUpdateToggle").checked = s.update_checks_enabled !== false;
   });
+  api().get_paths().then(p => {
+    $("appDataDirPath").textContent = p.app_data_dir;
+    $("appDataDirPath").title = p.app_data_dir;
+    $("logDirPath").textContent = p.log_dir;
+    $("logDirPath").title = p.log_dir;
+  });
 }
 function setDevices(dev) {
   if (!dev) return;
@@ -646,6 +652,8 @@ function bindUI() {
   $("settingsTheme").onchange = e => applyTheme(e.target.value);
   $("githubBtn").onclick = () => api().get_paths().then(p => api().open_url(p.source_url));
   $("donateBtn").onclick = () => api().get_paths().then(p => api().open_url(p.donate_url));
+  $("appDataDirOpenBtn").onclick = () => api().get_paths().then(p => api().open_folder(p.app_data_dir));
+  $("logDirOpenBtn").onclick = () => api().get_paths().then(p => api().open_folder(p.log_dir));
 
   // event delegation for nav
   $("nav").addEventListener("click", e => {

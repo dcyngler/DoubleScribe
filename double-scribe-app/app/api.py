@@ -19,6 +19,7 @@ import webview
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
+import transcriber as core   # for DATA_DIR / LOG_FILE (packaging-aware)
 from engine import LiveEngine
 from store import Store, TRANSCRIPT_DIR
 from settings import Settings
@@ -294,7 +295,19 @@ class Api:
         return True
 
     def get_paths(self):
-        return {"source_url": SOURCE_URL, "donate_url": DONATE_URL}
+        return {
+            "source_url": SOURCE_URL,
+            "donate_url": DONATE_URL,
+            "app_data_dir": str(core.DATA_DIR),
+            "log_dir": str(core.LOG_FILE.parent),
+        }
+
+    def open_folder(self, path):
+        try:
+            os.startfile(path)
+        except Exception:
+            pass
+        return True
 
     def get_library(self):
         return self.store.list()

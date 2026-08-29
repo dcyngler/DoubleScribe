@@ -296,6 +296,12 @@ input,select{font-family:inherit;font-size:14px}
 .settings-select{padding:8px 10px;border:1px solid var(--border);border-radius:8px;
   background:var(--n0);color:var(--n900);font-size:13px}
 .settings-select:disabled{color:var(--n400);background:var(--n100);cursor:default}
+.settings-row.column{flex-direction:column;align-items:stretch;gap:8px}
+.settings-path{display:flex;align-items:center;gap:10px}
+.settings-path-box{flex:1;min-width:0;padding:8px 12px;border:1px solid var(--border);border-radius:8px;
+  background:var(--n100);color:var(--n600);font-family:var(--mono);font-size:12px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.settings-path .btn-secondary{flex:0 0 auto}
 
 /* Toggle switch */
 .switch{position:relative;display:inline-flex;width:40px;height:22px;flex:0 0 auto}

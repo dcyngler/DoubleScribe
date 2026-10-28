@@ -20,12 +20,13 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE.parent))
 
 from api import Api
 from store import TRANSCRIPT_DIR
 
-HERE = Path(__file__).resolve().parent
 WEB_DIR = HERE / "web"
 HOST, PORT = "127.0.0.1", 8765
 
@@ -34,7 +35,8 @@ ALLOWED_METHODS = {
     "start", "set_pending_title", "stop", "set_title", "add_tag", "remove_tag",
     "create_folder", "set_folder", "toggle_favourite", "remove_from_library",
     "export_txt", "get_version", "open_url",
-    "get_settings", "set_profanity_filter", "set_language", "get_paths", "acknowledge_consent",
+    "get_settings", "set_profanity_filter", "set_language", "set_transcription_language",
+    "get_paths", "acknowledge_consent",
     "acknowledge_onboarding", "check_whats_new", "acknowledge_release_notes",
 }
 

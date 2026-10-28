@@ -63,6 +63,7 @@ class Api:
             on_saved=self._on_saved,
         )
         self.engine.censor_profanity = self.settings.get("profanity_filter")
+        self.engine.transcription_language = self.settings.get("transcription_language")
         self._window = None
         self._ready = False
         self._pending_update = None
@@ -254,6 +255,12 @@ class Api:
 
     def set_language(self, code):
         self.settings.set("language", code or "en")
+        return True
+
+    def set_transcription_language(self, code):
+        code = code or "auto"
+        self.settings.set("transcription_language", code)
+        self.engine.transcription_language = code
         return True
 
     def acknowledge_consent(self):

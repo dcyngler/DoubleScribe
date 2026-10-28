@@ -6,22 +6,24 @@ app without re-learning it. Read this, then the file you need to change.
 ## What this is
 A fully-local, offline audio transcriber for Windows. Captures the computer's audio output
 ("Them" — the call) and the microphone ("Me"), transcribes with Whisper, saves `.txt`
-transcripts. Nothing is uploaded. There are **three** front-ends over one engine:
+transcripts. Nothing is uploaded.
 
-| Launcher | File | What it is |
-|---|---|---|
-| `Run.bat` | `transcriber.py` | Original Tkinter app — record, then transcribe at the end (has speaker diarisation) |
-| `Run_Live.bat` | `live_transcriber.py` | Tkinter live app — transcribes as you speak |
-| `Run_App.bat` / **"Double Scribe"** shortcut | `app/` | **The main app** — polished pywebview UI |
-
-Most work now happens in **`app/`** (the new UI). The two Tkinter files are the working
-engine and must keep working — treat them as stable; the new UI reuses them.
+**The only shipped/launchable front-end is `app/` (`Run_App.bat` / the "Double Scribe"
+shortcut) — the pywebview UI.** It transcribes live (as you speak), via
+`app/engine.py` calling `live_transcriber.transcribe_utterance`. The older standalone
+Tkinter launchers (`Run.bat` for `transcriber.py`'s original record-then-transcribe-at-the-end
+app, `Run_Live.bat` for a standalone live Tkinter app) **no longer exist in this repo** — there
+is no way to trigger `transcriber.py`'s whole-call batch transcription (`transcribe_stream`)
+from anything currently shipped. `transcriber.py` isn't fully dead, though: `app/engine.py`
+still imports `transcriber.load_model` from it, so it stays relevant for model loading /
+packaging-path logic (see below) even though its own `transcribe_stream`/Tkinter UI path is
+unreachable.
 
 ## Environment (important — bleeding edge)
 - **Python 3.14** in `.venv` (`.venv\Scripts\python.exe`, `pythonw.exe` for no-console).
 - Key deps: `faster-whisper` (+`ctranslate2`), `soundcard`, `sherpa-onnx` (speaker embeddings —
-  full diarisation in the Tkinter apps, lightweight "Them" voice-change split in the new UI),
-  `pywebview`(+`pythonnet`), `numpy`, `pillow`, `pywin32`.
+  full diarisation existed in the old, now-removed Tkinter apps; lightweight "Them"
+  voice-change split in the shipped UI), `pywebview`(+`pythonnet`), `numpy`, `pillow`, `pywin32`.
 - GPU: `nvidia-*-cu12` wheels present (~1.9 GB) → Whisper runs on the RTX Blackwell GPU,
   falls back to CPU automatically. `transcriber._add_nvidia_dll_dirs()` puts the CUDA DLLs
   on PATH (CTranslate2 needs PATH, not just add_dll_directory).
@@ -76,8 +78,8 @@ Windows console is cp1252 — emoji/✓ crash `print`).
 ## Known gotchas
 - Python 3.14 is new: check wheels exist before adding deps (`pip install --dry-run <pkg>`).
 - `models/` is gitignored (see `.gitignore`), so on a fresh clone `sherpa-onnx` is installed
-  but `models/nemo_en_titanet_small.onnx` doesn't exist — the new UI's "Them" voice-change
-  split (and the Tkinter apps' diarisation) silently no-op until it's fetched:
+  but `models/nemo_en_titanet_small.onnx` doesn't exist — the shipped UI's "Them" voice-change
+  split silently no-ops until it's fetched:
   `curl -L -o models/nemo_en_titanet_small.onnx https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/nemo_en_titanet_small.onnx`.
   `DoubleScribe.spec` now bundles `sherpa_onnx` + this model (it's only ~38MB, so unlike
   Whisper it's bundled at build time, not downloaded) *if* it's present on the build machine

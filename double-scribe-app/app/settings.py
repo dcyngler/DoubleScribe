@@ -18,6 +18,7 @@ _DEFAULTS = {
     "consent_acknowledged_at": None,
     "consent_version_acknowledged": 0,
     "language": "en",
+    "transcription_language": "auto",
     "onboarded": False,
     "last_seen_version": None,
     "update_checks_enabled": True,

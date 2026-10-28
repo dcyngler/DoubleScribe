@@ -27,6 +27,18 @@ import profanity_filter
 
 SAMPLE_RATE = live.SAMPLE_RATE
 
+# A couple of our UI language codes don't match Whisper's own codes 1:1 --
+# Whisper doesn't distinguish Simplified/Traditional Chinese script.
+_WHISPER_LANG_OVERRIDES = {"zh-Hans": "zh", "zh-Hant": "zh"}
+
+
+def _whisper_language(code):
+    """Map a settings transcription_language value to faster-whisper's
+    `language=` argument: None for auto-detect, else a Whisper language code."""
+    if not code or code == "auto":
+        return None
+    return _WHISPER_LANG_OVERRIDES.get(code, code)
+
 # Temporary diagnostics for the live-latency/stop-hang investigation (see
 # claude/plans -- "Investigate & fix live-transcription latency/stop-hang
 # regression"). Off by default; set DS_LIVE_DEBUG=1 to print channel counts,
@@ -67,6 +79,7 @@ class LiveEngine:
         self.voice_detector = None
         self.recording = False
         self.censor_profanity = False
+        self.transcription_language = "auto"
 
         self.channels = []
         self.stop_event = None
@@ -197,7 +210,8 @@ class LiveEngine:
             if _DEBUG:
                 dur = audio.size / SAMPLE_RATE
                 t0 = time.monotonic()
-            text = live.transcribe_utterance(self.model, audio)
+            text = live.transcribe_utterance(
+                self.model, audio, language=_whisper_language(self.transcription_language))
             backlog = self.work_q.qsize()   # still-pending chunks -- growth = falling behind
             if _DEBUG:
                 infer = time.monotonic() - t0

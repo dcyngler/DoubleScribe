@@ -106,6 +106,13 @@ function applyI18n() {
     langSel.innerHTML = (window.I18N_LANGS || []).map(l =>
       `<option value="${l.code}"${l.code === S.lang ? " selected" : ""}>${esc(l.name)}</option>`).join("");
   }
+  const translangSel = $("settingsTranscriptionLanguage");
+  if (translangSel) {
+    const prevValue = translangSel.value;
+    translangSel.innerHTML = `<option value="auto">${esc(t("option_translang_auto"))}</option>` +
+      (window.I18N_LANGS || []).map(l => `<option value="${l.code}">${esc(l.name)}</option>`).join("");
+    if (prevValue) translangSel.value = prevValue;
+  }
   refreshDynamicI18n();
 }
 function refreshDynamicI18n() {
@@ -123,6 +130,9 @@ function setLanguage(code) {
   S.lang = code;
   api().set_language(code);
   applyI18n();
+}
+function setTranscriptionLanguage(code) {
+  api().set_transcription_language(code);
 }
 
 /* ---------- theme (system / light / dark) ---------- */
@@ -249,6 +259,7 @@ function loadAppSettings() {
   api().get_settings().then(s => {
     $("profanityToggle").checked = !!s.profanity_filter;
     $("autoUpdateToggle").checked = s.update_checks_enabled !== false;
+    $("settingsTranscriptionLanguage").value = s.transcription_language || "auto";
   });
   api().get_paths().then(p => {
     $("appDataDirPath").textContent = p.app_data_dir;
@@ -649,6 +660,7 @@ function bindUI() {
   };
   $("autoUpdateToggle").onchange = e => api().set_update_checks_enabled(e.target.checked);
   $("settingsLanguage").onchange = e => setLanguage(e.target.value);
+  $("settingsTranscriptionLanguage").onchange = e => setTranscriptionLanguage(e.target.value);
   $("settingsTheme").onchange = e => applyTheme(e.target.value);
   $("githubBtn").onclick = () => api().get_paths().then(p => api().open_url(p.source_url));
   $("donateBtn").onclick = () => api().get_paths().then(p => api().open_url(p.donate_url));

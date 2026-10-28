@@ -11,7 +11,7 @@
 ; the read-only install folder.
 
 #define MyAppName "Double Scribe"
-#define MyAppVersion "0.4.7"
+#define MyAppVersion "0.4.8"
 #define MyAppPublisher "Double Scribe"
 #define MyAppExeName "DoubleScribe.exe"
 

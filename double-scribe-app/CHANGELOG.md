@@ -7,6 +7,19 @@ When you cut a release, add an entry here **and** a matching short bullet
 list in `app/release_notes.py` (that one drives the in-app "What's new"
 modal; this file is the full human-readable log).
 
+## [0.4.8] - 2026-10-29
+
+### Changed
+- Setting Transcription language to English now uses Whisper's real any-language-to-English
+  translate mode (it auto-detects whatever language is actually spoken, then translates it),
+  instead of just assuming the audio was already English -- which could let the occasional
+  foreign word slip through untranslated. Other languages still work the previous way (assume
+  the audio already is that language), since Whisper has no "translate into X" mode for
+  anything but English.
+- Clarified the info-icon tooltips next to both language dropdowns: Application language is
+  the app's own interface language; Transcription language explains the English-translates /
+  other-languages-assume distinction above.
+
 ## [0.4.7] - 2026-10-28
 
 ### Added

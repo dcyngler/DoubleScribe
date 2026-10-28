@@ -32,12 +32,24 @@ SAMPLE_RATE = live.SAMPLE_RATE
 _WHISPER_LANG_OVERRIDES = {"zh-Hans": "zh", "zh-Hant": "zh"}
 
 
-def _whisper_language(code):
+def _whisper_task_and_language(code):
     """Map a settings transcription_language value to faster-whisper's
-    `language=` argument: None for auto-detect, else a Whisper language code."""
+    (language, task) arguments.
+
+    "auto" / unset -> (None, "transcribe"): Whisper guesses the language per phrase.
+    "en" -> (None, "translate"): Whisper's real any-language-to-English mode -- it
+      still auto-detects whatever is actually being said, then translates it into
+      English, so the output is reliably English even if the speaker isn't.
+    anything else -> (code, "transcribe"): assumes the audio already *is* that
+      language (useful when auto-detect keeps misreading a strong accent) -- this
+      is NOT translation, so it only gives a clean result when the audio really is
+      that language; Whisper has no "translate into X" mode for non-English targets.
+    """
     if not code or code == "auto":
-        return None
-    return _WHISPER_LANG_OVERRIDES.get(code, code)
+        return None, "transcribe"
+    if code == "en":
+        return None, "translate"
+    return _WHISPER_LANG_OVERRIDES.get(code, code), "transcribe"
 
 # Temporary diagnostics for the live-latency/stop-hang investigation (see
 # claude/plans -- "Investigate & fix live-transcription latency/stop-hang
@@ -210,8 +222,8 @@ class LiveEngine:
             if _DEBUG:
                 dur = audio.size / SAMPLE_RATE
                 t0 = time.monotonic()
-            text = live.transcribe_utterance(
-                self.model, audio, language=_whisper_language(self.transcription_language))
+            lang, task = _whisper_task_and_language(self.transcription_language)
+            text = live.transcribe_utterance(self.model, audio, language=lang, task=task)
             backlog = self.work_q.qsize()   # still-pending chunks -- growth = falling behind
             if _DEBUG:
                 infer = time.monotonic() - t0

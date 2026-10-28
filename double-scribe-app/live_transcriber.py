@@ -152,14 +152,18 @@ class VoiceChangeDetector:
         return is_change
 
 
-def transcribe_utterance(model, audio, language=None):
+def transcribe_utterance(model, audio, language=None, task="transcribe"):
     """Transcribe one endpointed phrase (fast settings for low latency).
-    language=None lets Whisper auto-detect; a code (e.g. "en") forces it."""
+    language=None lets Whisper auto-detect; a code (e.g. "en") forces it.
+    task="translate" always outputs English, translated from whatever
+    language is actually detected -- unlike forcing language="en", which
+    just assumes the audio already is English and can leave foreign words
+    untouched when it isn't."""
     if audio.size == 0:
         return ""
     segments, _ = model.transcribe(
         audio, beam_size=5, vad_filter=False, condition_on_previous_text=False,
-        language=language)
+        language=language, task=task)
     return " ".join(s.text.strip() for s in segments if s.text.strip()).strip()
 
 

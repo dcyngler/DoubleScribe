@@ -6,6 +6,11 @@ falls back to English for languages without a translation for these keys.
 """
 
 NOTES = {
+    "0.4.8": [
+        "Transcription language set to English now truly translates whatever is spoken into "
+        "English, instead of just assuming the audio was already English.",
+        "Clearer explanations on the language settings' info icons.",
+    ],
     "0.4.7": [
         "Added a Transcription language setting: Auto-detect (default) or force a specific "
         "language, now including Dutch.",

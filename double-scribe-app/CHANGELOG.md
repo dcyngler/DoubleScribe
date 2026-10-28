@@ -7,6 +7,21 @@ When you cut a release, add an entry here **and** a matching short bullet
 list in `app/release_notes.py` (that one drives the in-app "What's new"
 modal; this file is the full human-readable log).
 
+## [0.4.7] - 2026-10-28
+
+### Added
+- App settings now has a "Transcription language" dropdown: leave it on Auto-detect (the
+  previous behaviour -- Whisper guesses the language per phrase) or force a specific
+  language for more accurate, consistent results. The list matches the existing
+  application-language dropdown (now including Dutch) so both stay in sync.
+
+### Fixed
+- The silent in-app auto-updater could crash the app right after relaunching with a
+  transient "DLL load failed ... used by another process" error. The installer now
+  relaunches `DoubleScribe.exe` through `relaunch.bat`, which waits briefly first --
+  long enough for antivirus real-time scanning to release its lock on the freshly-written
+  DLLs -- instead of launching it immediately after the files hit disk.
+
 ## [0.4.6] - 2026-08-29
 
 ### Added

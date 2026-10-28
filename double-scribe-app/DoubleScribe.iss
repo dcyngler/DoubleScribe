@@ -11,7 +11,7 @@
 ; the read-only install folder.
 
 #define MyAppName "Double Scribe"
-#define MyAppVersion "0.4.6"
+#define MyAppVersion "0.4.7"
 #define MyAppPublisher "Double Scribe"
 #define MyAppExeName "DoubleScribe.exe"
 
@@ -59,6 +59,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 ; The entire PyInstaller onedir folder (exe + _internal + bundled model + web assets).
 Source: "dist\DoubleScribe\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
+; Relaunch helper for the silent auto-updater -- see [Run] below.
+Source: "relaunch.bat"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
@@ -69,5 +71,9 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 ; Silent/very-silent installs (the in-app auto-updater) skip the checkbox above entirely,
 ; so relaunch unconditionally here -- this is what makes the update feel like Handy's:
-; download, install, and come back up on the new version with no prompts.
-Filename: "{app}\{#MyAppExeName}"; Flags: nowait skipifnotsilent
+; download, install, and come back up on the new version with no prompts. Goes through
+; relaunch.bat (a short pause, then start) rather than launching the exe directly, so AV
+; real-time scanning has time to release its lock on the freshly-written DLLs first --
+; see relaunch.bat's own comment and the RestartApplications note above for the race this
+; avoids.
+Filename: "{app}\relaunch.bat"; Flags: runhidden nowait skipifnotsilent

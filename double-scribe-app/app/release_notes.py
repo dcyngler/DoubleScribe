@@ -6,6 +6,12 @@ falls back to English for languages without a translation for these keys.
 """
 
 NOTES = {
+    "0.4.7": [
+        "Added a Transcription language setting: Auto-detect (default) or force a specific "
+        "language, now including Dutch.",
+        "Fixed an occasional crash right after auto-updating, caused by antivirus still "
+        "scanning the new files when the app relaunched.",
+    ],
     "0.4.6": [
         "App settings now shows the App Data and Log directories, with an Open button for each.",
     ],
